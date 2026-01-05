@@ -1,20 +1,22 @@
 package com.thomas.cargotracker.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.thomas.cargotracker.network.Result
 import com.thomas.cargotracker.repository.UserRepository
 import com.thomas.cargotracker.ui.state.ChangePasswordState
 import com.thomas.cargotracker.ui.state.UpdateProfileState
 import com.thomas.cargotracker.ui.state.UserProfileState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class UserViewModel(
+@HiltViewModel
+class UserViewModel @Inject constructor(
     private val userRepository: UserRepository
 ) : ViewModel() {
 
@@ -168,17 +170,5 @@ class UserViewModel(
 
     fun clearProfileError() {
         _profileState.update { it.copy(error = null) }
-    }
-
-    class Factory(
-        private val userRepository: UserRepository
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(UserViewModel::class.java)) {
-                return UserViewModel(userRepository) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
     }
 }

@@ -71,74 +71,90 @@ fun LoginScreen(
     }
 
     Scaffold(
-        snackbarHost = { SnackbarHost(snackbarHostState) }
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.primary)
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiaryContainer
+                        )
+                    )
+                )
                 .padding(padding)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .imePadding(),
+                    .imePadding()
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
+                Spacer(modifier = Modifier.weight(1f))
+
                 // Header
-                Spacer(modifier = Modifier.height(60.dp))
-
-                Icon(
-                    imageVector = Icons.Default.LocalShipping,
-                    contentDescription = "Logo",
-                    modifier = Modifier.size(80.dp),
-                    tint = MaterialTheme.colorScheme.onPrimary
-                )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Text(
-                    text = "Welcome Back",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onPrimary
-                )
-
-                Text(
-                    text = "Sign in to continue",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                )
-
-                Spacer(modifier = Modifier.height(40.dp))
-
-                // Login Form Card
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    shape = MaterialTheme.shapes.extraLarge,
-                    colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(horizontal = 24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.LocalShipping,
+                        contentDescription = "Logo",
+                        modifier = Modifier.size(48.dp),
+                        tint = MaterialTheme.colorScheme.onPrimary
                     )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Text(
+                        text = "Welcome Back",
+                        style = MaterialTheme.typography.headlineMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
+                    )
+
+                    Text(
+                        text = "Sign in to continue",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(32.dp))
+
+                // Login Form Card - Edge to Edge
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        topStart = 32.dp,
+                        topEnd = 32.dp,
+                        bottomStart = 0.dp,
+                        bottomEnd = 0.dp
+                    ),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        verticalArrangement = Arrangement.Top
+                            .fillMaxWidth()
+                            .padding(top = 32.dp, start = 24.dp, end = 24.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Spacer(modifier = Modifier.height(16.dp))
-
                         Text(
                             text = "Login",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
-
-                        Spacer(modifier = Modifier.height(32.dp))
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         AuthTextField(
                             value = loginState.email,
@@ -150,8 +166,6 @@ fun LoginScreen(
                             onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
                             enabled = !loginState.isLoading
                         )
-
-                        Spacer(modifier = Modifier.height(16.dp))
 
                         PasswordTextField(
                             value = loginState.password,
@@ -166,8 +180,6 @@ fun LoginScreen(
                             enabled = !loginState.isLoading
                         )
 
-                        Spacer(modifier = Modifier.height(8.dp))
-
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.End
@@ -179,7 +191,7 @@ fun LoginScreen(
                             )
                         }
 
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(16.dp))
 
                         PrimaryButton(
                             text = "Sign In",
@@ -189,8 +201,6 @@ fun LoginScreen(
                             },
                             isLoading = loginState.isLoading
                         )
-
-                        Spacer(modifier = Modifier.weight(1f))
 
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -208,8 +218,9 @@ fun LoginScreen(
                                 enabled = !loginState.isLoading
                             )
                         }
-
-                        Spacer(modifier = Modifier.height(16.dp))
+                        
+                        // Add extra padding at the bottom for neatness
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             }

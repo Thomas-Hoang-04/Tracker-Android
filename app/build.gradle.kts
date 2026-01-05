@@ -5,6 +5,8 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
+    alias(libs.plugins.kotlin.ksp)
+    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -15,7 +17,7 @@ android {
 
     defaultConfig {
         applicationId = "com.thomas.cargotracker"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
@@ -85,4 +87,10 @@ dependencies {
     implementation(libs.androidx.nav3.ui)
     implementation(libs.androidx.nav3.material.adaptive)
     implementation(libs.androidx.nav3.lifecycle)
+
+    // Dependency Injection with Hilt
+    implementation(libs.hilt)
+    implementation(libs.hilt.viewmodel)
+    ksp(libs.hilt.compiler)
+    ksp(libs.androidx.hilt.compiler)
 }
