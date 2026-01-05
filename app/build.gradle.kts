@@ -5,8 +5,6 @@ plugins {
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
-    alias(libs.plugins.kotlin.kapt)
-    alias(libs.plugins.hilt.android)
 }
 
 android {
@@ -68,11 +66,8 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.test.manifest)
     implementation(libs.material.icons.extended)
 
-    // Dependency Injection with Hilt
-    implementation(libs.hilt)
-    implementation(libs.hilt.viewmodel)
-    kapt(libs.hilt.compiler)
-    kapt(libs.androidx.hilt.compiler)
+    // OkHttp Logging
+    implementation(libs.okhttp.logging.interceptor)
 
     // DataStore Preferences
     implementation(libs.datastore.preferences)
