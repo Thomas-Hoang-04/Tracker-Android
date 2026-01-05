@@ -53,10 +53,10 @@ fun AuthTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { Text(label, style = MaterialTheme.typography.bodyMedium) },
         modifier = modifier.fillMaxWidth(),
         leadingIcon = leadingIcon?.let {
-            { Icon(imageVector = it, contentDescription = null) }
+            { Icon(imageVector = it, contentDescription = null, modifier = Modifier.size(20.dp)) }
         },
         keyboardOptions = KeyboardOptions(
             keyboardType = keyboardType,
@@ -72,10 +72,13 @@ fun AuthTextField(
             { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
         } else null,
         enabled = enabled,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
+        textStyle = MaterialTheme.typography.bodyMedium,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     )
 }
@@ -98,16 +101,17 @@ fun PasswordTextField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        label = { Text(label) },
+        label = { Text(label, style = MaterialTheme.typography.bodyMedium) },
         modifier = modifier.fillMaxWidth(),
         leadingIcon = leadingIcon?.let {
-            { Icon(imageVector = it, contentDescription = null) }
+            { Icon(imageVector = it, contentDescription = null, modifier = Modifier.size(20.dp)) }
         },
         trailingIcon = {
             IconButton(onClick = { passwordVisible = !passwordVisible }) {
                 Icon(
                     imageVector = if (passwordVisible) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                    contentDescription = if (passwordVisible) "Hide password" else "Show password"
+                    contentDescription = if (passwordVisible) "Hide password" else "Show password",
+                    modifier = Modifier.size(20.dp)
                 )
             }
         },
@@ -126,10 +130,13 @@ fun PasswordTextField(
             { Text(errorMessage, color = MaterialTheme.colorScheme.error) }
         } else null,
         enabled = enabled,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
+        textStyle = MaterialTheme.typography.bodyMedium,
         colors = OutlinedTextFieldDefaults.colors(
             focusedBorderColor = MaterialTheme.colorScheme.primary,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+            focusedLabelColor = MaterialTheme.colorScheme.primary,
+            unfocusedLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
         )
     )
 }

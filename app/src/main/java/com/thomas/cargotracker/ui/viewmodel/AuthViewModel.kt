@@ -1,26 +1,35 @@
 package com.thomas.cargotracker.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import com.thomas.cargotracker.ble.BleConfig
 import com.thomas.cargotracker.network.Result
 import com.thomas.cargotracker.repository.AuthRepository
+import com.thomas.cargotracker.repository.MockAuthRepository
+import com.thomas.cargotracker.repository.MockUserRepository
 import com.thomas.cargotracker.repository.UserRepository
 import com.thomas.cargotracker.ui.state.AuthState
 import com.thomas.cargotracker.ui.state.ForgotPasswordState
 import com.thomas.cargotracker.ui.state.LoginState
 import com.thomas.cargotracker.ui.state.RegisterState
 import com.thomas.cargotracker.ui.state.ResetPasswordState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class AuthViewModel(
+@HiltViewModel
+class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository
+    private val mockAuthRepository: MockAuthRepository,
+    private val userRepository: UserRepository,
+    private val mockUserRepository: MockUserRepository
 ) : ViewModel() {
+
+    private val useMock = BleConfig.USE_MOCK_AUTH
 
     private val _authState = MutableStateFlow(AuthState())
     val authState: StateFlow<AuthState> = _authState.asStateFlow()
@@ -44,7 +53,7 @@ class AuthViewModel(
     private fun checkAuthStatus() {
         viewModelScope.launch {
             _authState.update { it.copy(isLoading = true) }
-            val isLoggedIn = authRepository.isLoggedIn()
+            val isLoggedIn = if (useMock) mockAuthRepository.isLoggedIn() else authRepository.isLoggedIn()
             if (isLoggedIn) {
                 loadCurrentUser()
             } else {
@@ -54,7 +63,8 @@ class AuthViewModel(
     }
 
     private suspend fun loadCurrentUser() {
-        when (val result = userRepository.getCurrentUser()) {
+        val result = if (useMock) mockUserRepository.getCurrentUser() else userRepository.getCurrentUser()
+        when (result) {
             is Result.Success -> {
                 _authState.update {
                     it.copy(
@@ -96,7 +106,8 @@ class AuthViewModel(
 
         viewModelScope.launch {
             _loginState.update { it.copy(isLoading = true, error = null) }
-            when (val result = authRepository.login(state.email, state.password)) {
+            val result = if (useMock) mockAuthRepository.login(state.email, state.password) else authRepository.login(state.email, state.password)
+            when (result) {
                 is Result.Success -> {
                     _loginState.update { it.copy(isLoading = false, isSuccess = true) }
                     _authState.update {
@@ -163,15 +174,28 @@ class AuthViewModel(
 
         viewModelScope.launch {
             _registerState.update { it.copy(isLoading = true, error = null) }
-            when (val result = authRepository.register(
-                username = state.username,
-                email = state.email,
-                password = state.password,
-                confirmPassword = state.confirmPassword,
-                fullName = state.fullName,
-                phoneNumber = state.phoneNumber.ifBlank { null },
-                address = state.address.ifBlank { null }
-            )) {
+            val result = if (useMock) {
+                mockAuthRepository.register(
+                    username = state.username,
+                    email = state.email,
+                    password = state.password,
+                    confirmPassword = state.confirmPassword,
+                    fullName = state.fullName,
+                    phoneNumber = state.phoneNumber.ifBlank { null },
+                    address = state.address.ifBlank { null }
+                )
+            } else {
+                authRepository.register(
+                    username = state.username,
+                    email = state.email,
+                    password = state.password,
+                    confirmPassword = state.confirmPassword,
+                    fullName = state.fullName,
+                    phoneNumber = state.phoneNumber.ifBlank { null },
+                    address = state.address.ifBlank { null }
+                )
+            }
+            when (result) {
                 is Result.Success -> {
                     _registerState.update { it.copy(isLoading = false, isSuccess = true) }
                     _authState.update {
@@ -208,7 +232,8 @@ class AuthViewModel(
 
         viewModelScope.launch {
             _forgotPasswordState.update { it.copy(isLoading = true, error = null) }
-            when (val result = authRepository.forgotPassword(state.email)) {
+            val result = if (useMock) mockAuthRepository.forgotPassword(state.email) else authRepository.forgotPassword(state.email)
+            when (result) {
                 is Result.Success -> {
                     _forgotPasswordState.update {
                         it.copy(isLoading = false, isSuccess = true, message = result.data)
@@ -253,11 +278,20 @@ class AuthViewModel(
 
         viewModelScope.launch {
             _resetPasswordState.update { it.copy(isLoading = true, error = null) }
-            when (val result = authRepository.resetPassword(
-                token = state.token,
-                newPassword = state.newPassword,
-                confirmPassword = state.confirmPassword
-            )) {
+            val result = if (useMock) {
+                mockAuthRepository.resetPassword(
+                    token = state.token,
+                    newPassword = state.newPassword,
+                    confirmPassword = state.confirmPassword
+                )
+            } else {
+                authRepository.resetPassword(
+                    token = state.token,
+                    newPassword = state.newPassword,
+                    confirmPassword = state.confirmPassword
+                )
+            }
+            when (result) {
                 is Result.Success -> {
                     _resetPasswordState.update {
                         it.copy(isLoading = false, isSuccess = true, message = result.data)
@@ -279,7 +313,7 @@ class AuthViewModel(
     fun logout() {
         viewModelScope.launch {
             _authState.update { it.copy(isLoading = true) }
-            authRepository.logout()
+            if (useMock) mockAuthRepository.logout() else authRepository.logout()
             _authState.value = AuthState(isLoading = false, isLoggedIn = false)
             resetLoginState()
             resetRegisterState()
@@ -288,18 +322,5 @@ class AuthViewModel(
 
     fun clearError() {
         _authState.update { it.copy(error = null) }
-    }
-
-    class Factory(
-        private val authRepository: AuthRepository,
-        private val userRepository: UserRepository
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(AuthViewModel::class.java)) {
-                return AuthViewModel(authRepository, userRepository) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
     }
 }

@@ -16,6 +16,7 @@ class TokenManager(context: Context) {
     companion object {
         private val ACCESS_TOKEN_KEY = stringPreferencesKey("access_token")
         private val REFRESH_TOKEN_KEY = stringPreferencesKey("refresh_token")
+        private val MOCK_EMAIL_KEY = stringPreferencesKey("mock_logged_in_email")
     }
 
     suspend fun saveAccessToken(token: String) {
@@ -51,6 +52,7 @@ class TokenManager(context: Context) {
         dataStore.edit { preferences ->
             preferences.remove(ACCESS_TOKEN_KEY)
             preferences.remove(REFRESH_TOKEN_KEY)
+            preferences.remove(MOCK_EMAIL_KEY)
         }
     }
 
@@ -58,4 +60,22 @@ class TokenManager(context: Context) {
         val preferences = dataStore.data.first()
         return preferences[ACCESS_TOKEN_KEY] != null && preferences[REFRESH_TOKEN_KEY] != null
     }
+
+    suspend fun saveMockEmail(email: String) {
+        dataStore.edit { preferences ->
+            preferences[MOCK_EMAIL_KEY] = email
+        }
+    }
+
+    suspend fun getMockEmail(): String? {
+        val preferences = dataStore.data.first()
+        return preferences[MOCK_EMAIL_KEY]
+    }
+
+    suspend fun clearMockEmail() {
+        dataStore.edit { preferences ->
+            preferences.remove(MOCK_EMAIL_KEY)
+        }
+    }
 }
+

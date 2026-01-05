@@ -1,7 +1,6 @@
 package com.thomas.cargotracker.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.thomas.cargotracker.dto.ShipmentResponse
 import com.thomas.cargotracker.dto.ShipmentStatus
@@ -12,13 +11,16 @@ import com.thomas.cargotracker.ui.state.ShipmentActionState
 import com.thomas.cargotracker.ui.state.ShipmentDetailState
 import com.thomas.cargotracker.ui.state.ShipmentFilterState
 import com.thomas.cargotracker.ui.state.ShipmentListState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ShipmentViewModel(
+@HiltViewModel
+class ShipmentViewModel @Inject constructor(
     private val shipmentRepository: ShipmentRepository
 ) : ViewModel() {
 
@@ -242,17 +244,5 @@ class ShipmentViewModel(
 
     fun clearDetailError() {
         _detailState.update { it.copy(error = null) }
-    }
-
-    class Factory(
-        private val shipmentRepository: ShipmentRepository
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(ShipmentViewModel::class.java)) {
-                return ShipmentViewModel(shipmentRepository) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
     }
 }

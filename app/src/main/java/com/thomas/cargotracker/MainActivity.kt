@@ -5,44 +5,43 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.thomas.cargotracker.di.AppContainer
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.thomas.cargotracker.dto.UserRole
 import com.thomas.cargotracker.ui.navigation.AuthNavigation
-import com.thomas.cargotracker.ui.screens.main.MainScreen
+import com.thomas.cargotracker.ui.navigation.MainNavigation
 import com.thomas.cargotracker.ui.theme.CargoTrackerTheme
 import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
-    private val appContainer: AppContainer by lazy {
-        (application as CargoTrackerApplication).appContainer
-    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             CargoTrackerTheme {
-                CargoTrackerApp(appContainer = appContainer)
+                CargoTrackerApp()
             }
         }
     }
 }
 
 @Composable
-fun CargoTrackerApp(appContainer: AppContainer) {
+fun CargoTrackerApp(
+    authViewModel: AuthViewModel = hiltViewModel()
+) {
+    val authState by authViewModel.authState.collectAsState()
     var isAuthenticated by rememberSaveable { mutableStateOf(false) }
 
-    val authViewModel: AuthViewModel = viewModel(
-        factory = appContainer.authViewModelFactory
-    )
-
     if (isAuthenticated) {
-        MainScreen(
+        MainNavigation(
+            userRole = authState.currentUser?.role ?: UserRole.PROVIDER,
             onLogout = {
                 authViewModel.logout()
                 isAuthenticated = false
@@ -57,3 +56,4 @@ fun CargoTrackerApp(appContainer: AppContainer) {
         )
     }
 }
+

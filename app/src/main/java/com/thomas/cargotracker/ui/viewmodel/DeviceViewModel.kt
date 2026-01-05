@@ -1,7 +1,6 @@
 package com.thomas.cargotracker.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.thomas.cargotracker.dto.DeviceResponse
 import com.thomas.cargotracker.dto.DeviceStatus
@@ -12,13 +11,16 @@ import com.thomas.cargotracker.ui.state.DeviceActionState
 import com.thomas.cargotracker.ui.state.DeviceDetailState
 import com.thomas.cargotracker.ui.state.DeviceFilterState
 import com.thomas.cargotracker.ui.state.DeviceListState
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class DeviceViewModel(
+@HiltViewModel
+class DeviceViewModel @Inject constructor(
     private val deviceRepository: DeviceRepository
 ) : ViewModel() {
 
@@ -295,17 +297,5 @@ class DeviceViewModel(
 
     fun clearDetailError() {
         _detailState.update { it.copy(error = null) }
-    }
-
-    class Factory(
-        private val deviceRepository: DeviceRepository
-    ) : ViewModelProvider.Factory {
-        @Suppress("UNCHECKED_CAST")
-        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-            if (modelClass.isAssignableFrom(DeviceViewModel::class.java)) {
-                return DeviceViewModel(deviceRepository) as T
-            }
-            throw IllegalArgumentException("Unknown ViewModel class")
-        }
     }
 }

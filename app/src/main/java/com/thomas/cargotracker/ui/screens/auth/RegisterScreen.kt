@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.LocalShipping
@@ -26,14 +25,11 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -42,7 +38,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -80,218 +75,194 @@ fun RegisterScreen(
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = MaterialTheme.colorScheme.onPrimary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = Color.Transparent
-                )
-            )
-        }
+        containerColor = MaterialTheme.colorScheme.background
     ) { padding ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.primary)
+                .background(
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiaryContainer
+                        )
+                    )
+                )
                 .padding(padding)
         ) {
             Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .imePadding(),
+                modifier = Modifier.fillMaxSize(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                // Header
+                Spacer(modifier = Modifier.height(32.dp))
+
                 Icon(
                     imageVector = Icons.Default.LocalShipping,
                     contentDescription = "Logo",
-                    modifier = Modifier.size(60.dp),
+                    modifier = Modifier.size(56.dp),
                     tint = MaterialTheme.colorScheme.onPrimary
                 )
 
-                Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 Text(
                     text = "Create Account",
-                    style = MaterialTheme.typography.headlineMedium,
+                    style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onPrimary
                 )
 
-                Text(
-                    text = "Fill in your details to get started",
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
-                )
+                Spacer(modifier = Modifier.height(32.dp))
 
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Register Form Card
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .weight(1f),
-                    shape = MaterialTheme.shapes.extraLarge,
+                        .weight(1f), // Fill remaining space
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                        topStart = 32.dp,
+                        topEnd = 32.dp,
+                        bottomStart = 0.dp,
+                        bottomEnd = 0.dp
+                    ),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(24.dp),
-                        verticalArrangement = Arrangement.Top
+                            .imePadding()
+                            .padding(top = 32.dp, start = 24.dp, end = 24.dp, bottom = 24.dp)
                     ) {
-                        Spacer(modifier = Modifier.height(8.dp))
-
                         Text(
                             text = "Sign Up",
-                            style = MaterialTheme.typography.headlineSmall,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        // Username
-                        AuthTextField(
-                            value = registerState.username,
-                            onValueChange = { authViewModel.updateRegisterUsername(it) },
-                            label = "Username",
-                            leadingIcon = Icons.Default.Person,
-                            imeAction = ImeAction.Next,
-                            onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
-                            enabled = !registerState.isLoading
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Full Name
-                        AuthTextField(
-                            value = registerState.fullName,
-                            onValueChange = { authViewModel.updateRegisterFullName(it) },
-                            label = "Full Name",
-                            leadingIcon = Icons.Default.Person,
-                            imeAction = ImeAction.Next,
-                            onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
-                            enabled = !registerState.isLoading
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Email
-                        AuthTextField(
-                            value = registerState.email,
-                            onValueChange = { authViewModel.updateRegisterEmail(it) },
-                            label = "Email",
-                            leadingIcon = Icons.Default.Email,
-                            keyboardType = KeyboardType.Email,
-                            imeAction = ImeAction.Next,
-                            onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
-                            enabled = !registerState.isLoading
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Phone Number (Optional)
-                        AuthTextField(
-                            value = registerState.phoneNumber,
-                            onValueChange = { authViewModel.updateRegisterPhoneNumber(it) },
-                            label = "Phone Number (Optional)",
-                            leadingIcon = Icons.Default.Phone,
-                            keyboardType = KeyboardType.Phone,
-                            imeAction = ImeAction.Next,
-                            onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
-                            enabled = !registerState.isLoading
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Address (Optional)
-                        AuthTextField(
-                            value = registerState.address,
-                            onValueChange = { authViewModel.updateRegisterAddress(it) },
-                            label = "Address (Optional)",
-                            leadingIcon = Icons.Default.Home,
-                            imeAction = ImeAction.Next,
-                            onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
-                            enabled = !registerState.isLoading
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Password
-                        PasswordTextField(
-                            value = registerState.password,
-                            onValueChange = { authViewModel.updateRegisterPassword(it) },
-                            label = "Password",
-                            leadingIcon = Icons.Default.Lock,
-                            imeAction = ImeAction.Next,
-                            onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
-                            enabled = !registerState.isLoading
-                        )
-
-                        Spacer(modifier = Modifier.height(12.dp))
-
-                        // Confirm Password
-                        PasswordTextField(
-                            value = registerState.confirmPassword,
-                            onValueChange = { authViewModel.updateRegisterConfirmPassword(it) },
-                            label = "Confirm Password",
-                            leadingIcon = Icons.Default.Lock,
-                            imeAction = ImeAction.Done,
-                            onImeAction = {
-                                focusManager.clearFocus()
-                                authViewModel.register()
-                            },
-                            enabled = !registerState.isLoading
-                        )
-
-                        Spacer(modifier = Modifier.height(24.dp))
-
-                        PrimaryButton(
-                            text = "Create Account",
-                            onClick = {
-                                focusManager.clearFocus()
-                                authViewModel.register()
-                            },
-                            isLoading = registerState.isLoading
+                            color = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.align(Alignment.CenterHorizontally)
                         )
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.Center,
-                            verticalAlignment = Alignment.CenterVertically
+                        // Scrollable Input Area
+                        Column(
+                            modifier = Modifier
+                                .weight(1f)
+                                .verticalScroll(rememberScrollState()),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
                         ) {
-                            Text(
-                                text = "Already have an account?",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            AuthTextField(
+                                value = registerState.username,
+                                onValueChange = { authViewModel.updateRegisterUsername(it) },
+                                label = "Username",
+                                leadingIcon = Icons.Default.Person,
+                                imeAction = ImeAction.Next,
+                                onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
+                                enabled = !registerState.isLoading
                             )
-                            SecondaryButton(
-                                text = "Sign In",
-                                onClick = onNavigateBack,
+
+                            AuthTextField(
+                                value = registerState.fullName,
+                                onValueChange = { authViewModel.updateRegisterFullName(it) },
+                                label = "Full Name",
+                                leadingIcon = Icons.Default.Person,
+                                imeAction = ImeAction.Next,
+                                onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
+                                enabled = !registerState.isLoading
+                            )
+
+                            AuthTextField(
+                                value = registerState.email,
+                                onValueChange = { authViewModel.updateRegisterEmail(it) },
+                                label = "Email",
+                                leadingIcon = Icons.Default.Email,
+                                keyboardType = KeyboardType.Email,
+                                imeAction = ImeAction.Next,
+                                onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
+                                enabled = !registerState.isLoading
+                            )
+
+                            AuthTextField(
+                                value = registerState.phoneNumber,
+                                onValueChange = { authViewModel.updateRegisterPhoneNumber(it) },
+                                label = "Phone Number (Optional)",
+                                leadingIcon = Icons.Default.Phone,
+                                keyboardType = KeyboardType.Phone,
+                                imeAction = ImeAction.Next,
+                                onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
+                                enabled = !registerState.isLoading
+                            )
+
+                            AuthTextField(
+                                value = registerState.address,
+                                onValueChange = { authViewModel.updateRegisterAddress(it) },
+                                label = "Address (Optional)",
+                                leadingIcon = Icons.Default.Home,
+                                imeAction = ImeAction.Next,
+                                onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
+                                enabled = !registerState.isLoading
+                            )
+
+                            PasswordTextField(
+                                value = registerState.password,
+                                onValueChange = { authViewModel.updateRegisterPassword(it) },
+                                label = "Password",
+                                leadingIcon = Icons.Default.Lock,
+                                imeAction = ImeAction.Next,
+                                onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
+                                enabled = !registerState.isLoading
+                            )
+
+                            PasswordTextField(
+                                value = registerState.confirmPassword,
+                                onValueChange = { authViewModel.updateRegisterConfirmPassword(it) },
+                                label = "Confirm Password",
+                                leadingIcon = Icons.Default.Lock,
+                                imeAction = ImeAction.Done,
+                                onImeAction = {
+                                    focusManager.clearFocus()
+                                    authViewModel.register()
+                                },
                                 enabled = !registerState.isLoading
                             )
                         }
 
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        // Fixed Bottom Section
+                        Column {
+                            PrimaryButton(
+                                text = "Create Account",
+                                onClick = {
+                                    focusManager.clearFocus()
+                                    authViewModel.register()
+                                },
+                                isLoading = registerState.isLoading
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.Center,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "Already have an account?",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                                SecondaryButton(
+                                    text = "Sign In",
+                                    onClick = onNavigateBack,
+                                    enabled = !registerState.isLoading
+                                )
+                            }
+                        }
                     }
                 }
             }
         }
     }
 }
+
 
