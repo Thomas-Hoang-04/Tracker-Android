@@ -1,5 +1,6 @@
 package com.thomas.cargotracker.ui.screens.shipper
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -61,7 +62,7 @@ fun ShipperHomeScreen(
                 ProviderOrderCard(
                     order = order,
                     onMoreDetailsClick = { onOrderDetails(order.id) },
-                    border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                 )
             }
             

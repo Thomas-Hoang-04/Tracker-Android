@@ -1,5 +1,10 @@
 package com.thomas.cargotracker.ui.viewmodel
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import androidx.annotation.RequiresPermission
+import androidx.core.app.ActivityCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thomas.cargotracker.ble.BleConfig
@@ -12,6 +17,7 @@ import com.thomas.cargotracker.ui.state.BleError
 import com.thomas.cargotracker.ui.state.BleScannedDevice
 import com.thomas.cargotracker.ui.state.BleSetupState
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -23,6 +29,7 @@ import javax.inject.Inject
 
 @HiltViewModel
 class BleViewModel @Inject constructor(
+    @field:ApplicationContext private val context: Context,
     private val bleManager: BleManager,
     private val mockBleManager: MockBleManager
 ) : ViewModel() {
@@ -122,15 +129,42 @@ class BleViewModel @Inject constructor(
             _uiState.update { it.copy(error = BleError.BluetoothDisabled.message) }
             return
         }
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            _uiState.update { it.copy(error = BleError.PermissionDenied.message, isLoading = false) }
+            return
+        }
         if (useMock) mockBleManager.startScan() else bleManager.startScan()
     }
 
     fun stopScan() {
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            _uiState.update { it.copy(error = BleError.PermissionDenied.message, isLoading = false) }
+            return
+        }
         if (useMock) mockBleManager.stopScan() else bleManager.stopScan()
     }
 
     fun connectToDevice(device: BleScannedDevice) {
         _uiState.update { it.copy(isLoading = true, error = null) }
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_SCAN
+            ) != PackageManager.PERMISSION_GRANTED || ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            _uiState.update { it.copy(error = BleError.PermissionDenied.message, isLoading = false) }
+            return
+        }
         if (useMock) mockBleManager.connect(device) else bleManager.connect(device)
         startConnectionTimeout()
     }
@@ -141,18 +175,42 @@ class BleViewModel @Inject constructor(
             return
         }
         _uiState.update { it.copy(isLoading = true, error = null) }
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            _uiState.update { it.copy(error = BleError.PermissionDenied.message, isLoading = false) }
+            return
+        }
         if (useMock) mockBleManager.sendToken(token) else bleManager.sendToken(token)
         startOperationTimeout()
     }
 
     fun sendThresholds(thresholds: ThresholdSettings) {
-        _uiState.update { it.copy(isLoading = true, error = null) }
+        _uiState.update { it.copy(isLoading = true, error = null, setupComplete = false) }
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            _uiState.update { it.copy(error = BleError.PermissionDenied.message, isLoading = false) }
+            return
+        }
         if (useMock) mockBleManager.sendThresholds(thresholds) else bleManager.sendThresholds(thresholds)
         startOperationTimeout()
     }
 
     fun disconnect() {
         cancelTimeout()
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            _uiState.update { it.copy(error = BleError.PermissionDenied.message, isLoading = false) }
+            return
+        }
         if (useMock) mockBleManager.disconnect() else bleManager.disconnect()
         resetState()
     }
@@ -169,6 +227,7 @@ class BleViewModel @Inject constructor(
         _uiState.update { BleUiState() }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun startConnectionTimeout() {
         timeoutJob?.cancel()
         timeoutJob = viewModelScope.launch {
@@ -197,6 +256,7 @@ class BleViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = false) }
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     override fun onCleared() {
         super.onCleared()
         bleManager.disconnect()
