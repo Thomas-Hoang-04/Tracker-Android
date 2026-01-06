@@ -1,9 +1,11 @@
 package com.thomas.cargotracker.ble
 
+import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import com.thomas.cargotracker.dto.BleRequestCode
 import com.thomas.cargotracker.dto.BleResponseCode
 import com.thomas.cargotracker.dto.ThresholdSettings
+import com.thomas.cargotracker.ui.state.BleError
 import com.thomas.cargotracker.ui.state.BleScannedDevice
 import com.thomas.cargotracker.ui.state.BleSetupState
 import kotlinx.coroutines.CoroutineScope
@@ -21,7 +23,9 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
-class MockBleManager @Inject constructor() {
+class MockBleManager @Inject constructor(
+    private val bluetoothAdapter: BluetoothAdapter?
+) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val _scanState = MutableStateFlow(BleManager.ScanState())
@@ -36,28 +40,61 @@ class MockBleManager @Inject constructor() {
     private val _deviceResponse = MutableSharedFlow<Pair<BleResponseCode, String?>>()
     val deviceResponse = _deviceResponse.asSharedFlow()
 
-    private val _error = MutableSharedFlow<com.thomas.cargotracker.ui.state.BleError>()
+    private val _error = MutableSharedFlow<BleError>()
     val error = _error.asSharedFlow()
 
-    private var hasToken = false
-    private var hasThreshold = false
+    private var mockBluetoothEnabled = true
 
-    private val mockDevices = listOf(
-        createMockDevice("ESP32-IoT-Device-001", "AA:BB:CC:DD:EE:01", -45),
-        createMockDevice("ESP32-IoT-Device-002", "AA:BB:CC:DD:EE:02", -62),
-        createMockDevice("ESP32-IoT-Device-003", "AA:BB:CC:DD:EE:03", -78)
+    private data class MockDeviceState(
+        val device: BleScannedDevice,
+        var hasToken: Boolean,
+        var hasThreshold: Boolean
     )
 
-    private fun createMockDevice(name: String, address: String, rssi: Int): BleScannedDevice {
-        return BleScannedDevice(
-            device = null as BluetoothDevice?,
-            name = name,
-            address = address,
-            rssi = rssi
+    private val mockDeviceStates = mutableMapOf(
+        "AA:BB:CC:DD:EE:01" to MockDeviceState(
+            device = BleScannedDevice(
+                device = null as BluetoothDevice?,
+                name = "ESP32-New-Device",
+                address = "AA:BB:CC:DD:EE:01",
+                rssi = -45
+            ),
+            hasToken = false,
+            hasThreshold = false
+        ),
+        "AA:BB:CC:DD:EE:02" to MockDeviceState(
+            device = BleScannedDevice(
+                device = null as BluetoothDevice?,
+                name = "ESP32-Has-Token",
+                address = "AA:BB:CC:DD:EE:02",
+                rssi = -62
+            ),
+            hasToken = true,
+            hasThreshold = false
+        ),
+        "AA:BB:CC:DD:EE:03" to MockDeviceState(
+            device = BleScannedDevice(
+                device = null as BluetoothDevice?,
+                name = "ESP32-Ready",
+                address = "AA:BB:CC:DD:EE:03",
+                rssi = -78
+            ),
+            hasToken = true,
+            hasThreshold = true
         )
-    }
+    )
+
+    private val mockDevices: List<BleScannedDevice>
+        get() = mockDeviceStates.values.map { it.device }
+
+    private var connectedDeviceAddress: String? = null
 
     fun startScan() {
+        if (!isBluetoothEnabled()) {
+            scope.launch { _error.emit(BleError.BluetoothDisabled) }
+            return
+        }
+
         _scanState.update { BleManager.ScanState(isScanning = true, devices = emptyList()) }
 
         scope.launch {
@@ -77,6 +114,20 @@ class MockBleManager @Inject constructor() {
     }
 
     fun connect(device: BleScannedDevice) {
+        if (!isBluetoothEnabled()) {
+            scope.launch { _error.emit(BleError.BluetoothDisabled) }
+            return
+        }
+
+        val deviceState = mockDeviceStates[device.address]
+        if (deviceState == null) {
+            scope.launch { _error.emit(BleError.DeviceNotFound) }
+            return
+        }
+
+        connectedDeviceAddress = device.address
+        stopScan()
+
         _connectionState.update {
             BleManager.ConnectionState(setupState = BleSetupState.CONNECTING, connectedDevice = device)
         }
@@ -89,13 +140,13 @@ class MockBleManager @Inject constructor() {
             delay(1000)
 
             when {
-                !hasToken -> {
+                !deviceState.hasToken -> {
                     _connectionState.update {
                         it.copy(setupState = BleSetupState.TOKEN_REQUESTED, message = "Device needs token")
                     }
                     _deviceRequest.emit(BleRequestCode.REQUEST_TOKEN)
                 }
-                !hasThreshold -> {
+                !deviceState.hasThreshold -> {
                     _connectionState.update {
                         it.copy(setupState = BleSetupState.THRESHOLD_REQUESTED, message = "Device needs threshold settings")
                     }
@@ -112,16 +163,21 @@ class MockBleManager @Inject constructor() {
     }
 
     fun sendToken(token: String) {
+        val deviceState = connectedDeviceAddress?.let { mockDeviceStates[it] }
+        if (deviceState == null) {
+            scope.launch { _error.emit(BleError.WriteFailed) }
+            return
+        }
         _connectionState.update { it.copy(setupState = BleSetupState.TOKEN_SENDING) }
 
         scope.launch {
             delay(1000)
-            hasToken = true
+            deviceState.hasToken = true
             _connectionState.update { it.copy(setupState = BleSetupState.TOKEN_CONFIRMED, message = "Token saved successfully") }
             _deviceResponse.emit(BleResponseCode.TOKEN_OK to "Token saved successfully")
 
             delay(1000)
-            if (!hasThreshold) {
+            if (!deviceState.hasThreshold) {
                 _connectionState.update {
                     it.copy(setupState = BleSetupState.THRESHOLD_REQUESTED, message = "Device needs threshold settings")
                 }
@@ -131,11 +187,16 @@ class MockBleManager @Inject constructor() {
     }
 
     fun sendThresholds(thresholds: ThresholdSettings) {
+        val deviceState = connectedDeviceAddress?.let { mockDeviceStates[it] }
+        if (deviceState == null) {
+            scope.launch { _error.emit(BleError.WriteFailed) }
+            return
+        }
         _connectionState.update { it.copy(setupState = BleSetupState.THRESHOLD_SENDING) }
 
         scope.launch {
             delay(1000)
-            hasThreshold = true
+            deviceState.hasThreshold = true
             _connectionState.update { it.copy(setupState = BleSetupState.THRESHOLD_CONFIRMED, message = "Thresholds saved successfully") }
             _deviceResponse.emit(BleResponseCode.THRESHOLD_OK to "Thresholds saved successfully")
 
@@ -146,15 +207,23 @@ class MockBleManager @Inject constructor() {
     }
 
     fun disconnect() {
+        connectedDeviceAddress = null
         _connectionState.update { BleManager.ConnectionState() }
     }
 
-    fun isBluetoothEnabled(): Boolean = true
+    fun isBluetoothEnabled(): Boolean = bluetoothAdapter?.isEnabled ?: mockBluetoothEnabled
+
+    fun setBluetoothEnabled(enabled: Boolean) {
+        mockBluetoothEnabled = enabled
+    }
 
     fun resetMockState() {
-        hasToken = false
-        hasThreshold = false
+        connectedDeviceAddress = null
+        mockDeviceStates["AA:BB:CC:DD:EE:01"]?.apply { hasToken = false; hasThreshold = false }
+        mockDeviceStates["AA:BB:CC:DD:EE:02"]?.apply { hasToken = true; hasThreshold = false }
+        mockDeviceStates["AA:BB:CC:DD:EE:03"]?.apply { hasToken = true; hasThreshold = true }
         _scanState.update { BleManager.ScanState() }
         _connectionState.update { BleManager.ConnectionState() }
+        mockBluetoothEnabled = true
     }
 }

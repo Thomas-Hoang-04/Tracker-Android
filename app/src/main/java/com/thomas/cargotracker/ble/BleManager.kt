@@ -1,8 +1,7 @@
 package com.thomas.cargotracker.ble
 
-import android.annotation.SuppressLint
+import android.Manifest
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
@@ -12,7 +11,10 @@ import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
+import android.content.pm.PackageManager
 import android.os.Build
+import androidx.annotation.RequiresPermission
+import androidx.core.app.ActivityCompat
 import com.thomas.cargotracker.dto.BleDeviceRequest
 import com.thomas.cargotracker.dto.BleDeviceResponse
 import com.thomas.cargotracker.dto.BleRequestCode
@@ -78,7 +80,7 @@ class BleManager @Inject constructor(
     )
 
     private val scanCallback = object : ScanCallback() {
-        @SuppressLint("MissingPermission")
+        @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onScanResult(callbackType: Int, result: ScanResult) {
             val device = result.device
             val name = device.name ?: return
@@ -101,7 +103,7 @@ class BleManager @Inject constructor(
     }
 
     private val gattCallback = object : BluetoothGattCallback() {
-        @SuppressLint("MissingPermission")
+        @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onConnectionStateChange(gatt: BluetoothGatt, status: Int, newState: Int) {
             when (newState) {
                 BluetoothProfile.STATE_CONNECTED -> {
@@ -117,7 +119,7 @@ class BleManager @Inject constructor(
             }
         }
 
-        @SuppressLint("MissingPermission")
+        @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
         override fun onServicesDiscovered(gatt: BluetoothGatt, status: Int) {
             if (status != BluetoothGatt.GATT_SUCCESS) {
                 scope.launch { _error.emit(BleError.ServiceDiscoveryFailed) }
@@ -149,9 +151,8 @@ class BleManager @Inject constructor(
             _connectionState.update { it.copy(setupState = BleSetupState.WAITING_FOR_REQUEST) }
         }
 
-        @Deprecated("Deprecated in Java")
+        @Suppress("DEPRECATION", "OVERRIDE_DEPRECATION")
         override fun onCharacteristicChanged(gatt: BluetoothGatt, characteristic: BluetoothGattCharacteristic) {
-            @Suppress("DEPRECATION")
             val data = characteristic.value
             handleNotification(data)
         }
@@ -205,7 +206,7 @@ class BleManager @Inject constructor(
         }
     }
 
-    @SuppressLint("MissingPermission")
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun startScan() {
         if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
             scope.launch { _error.emit(BleError.BluetoothDisabled) }
@@ -227,14 +228,19 @@ class BleManager @Inject constructor(
         }
     }
 
-    @SuppressLint("MissingPermission")
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun stopScan() {
         bluetoothAdapter?.bluetoothLeScanner?.stopScan(scanCallback)
         _scanState.update { it.copy(isScanning = false) }
     }
 
-    @SuppressLint("MissingPermission")
+    @RequiresPermission(Manifest.permission.BLUETOOTH_SCAN)
     fun connect(device: BleScannedDevice) {
+        if (bluetoothAdapter == null || !bluetoothAdapter.isEnabled) {
+            scope.launch { _error.emit(BleError.BluetoothDisabled) }
+            return
+        }
+
         val bluetoothDevice = device.device ?: run {
             scope.launch { _error.emit(BleError.DeviceNotFound) }
             return
@@ -243,24 +249,35 @@ class BleManager @Inject constructor(
         _connectionState.update { 
             ConnectionState(setupState = BleSetupState.CONNECTING, connectedDevice = device) 
         }
+        if (ActivityCompat.checkSelfPermission(
+                context,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ) != PackageManager.PERMISSION_GRANTED
+        ) {
+            scope.launch { _error.emit(BleError.PermissionDenied) }
+            _connectionState.update { ConnectionState() }
+            return
+        }
         bluetoothGatt = bluetoothDevice.connectGatt(context, false, gattCallback)
     }
 
-    @SuppressLint("MissingPermission")
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun sendToken(token: String) {
         _connectionState.update { it.copy(setupState = BleSetupState.TOKEN_SENDING) }
         val data = TokenData(token).toJsonString().toByteArray(Charsets.UTF_8)
         writeData(data)
     }
 
-    @SuppressLint("MissingPermission")
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun sendThresholds(thresholds: ThresholdSettings) {
         _connectionState.update { it.copy(setupState = BleSetupState.THRESHOLD_SENDING) }
         val data = thresholds.toJsonString().toByteArray(Charsets.UTF_8)
         writeData(data)
     }
 
-    @SuppressLint("MissingPermission")
+
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
+    @Suppress("DEPRECATION")
     private fun writeData(data: ByteArray) {
         val gatt = bluetoothGatt
         val characteristic = writeCharacteristic
@@ -277,19 +294,18 @@ class BleManager @Inject constructor(
                 BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT
             )
         } else {
-            @Suppress("DEPRECATION")
             characteristic.value = data
-            @Suppress("DEPRECATION")
             gatt.writeCharacteristic(characteristic)
         }
     }
 
-    @SuppressLint("MissingPermission")
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     fun disconnect() {
         bluetoothGatt?.disconnect()
         cleanup()
     }
 
+    @RequiresPermission(Manifest.permission.BLUETOOTH_CONNECT)
     private fun cleanup() {
         bluetoothGatt?.close()
         bluetoothGatt = null
