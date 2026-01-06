@@ -21,13 +21,16 @@ import com.thomas.cargotracker.ui.viewmodel.user.ShipperViewModel
 import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
 
 @Composable
 fun ShipperHomeScreen(
     onOrderDetails: (String) -> Unit,
-    viewModel: ShipperViewModel = hiltViewModel()
+    viewModel: ShipperViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel
 ) {
     val orders by viewModel.assignedOrders.collectAsState()
+    val authState by authViewModel.authState.collectAsState()
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background
@@ -44,15 +47,20 @@ fun ShipperHomeScreen(
             item {
                 Column(modifier = Modifier.padding(bottom = 8.dp)) {
                     Text(
-                        text = "Hi, Shipper",
+                        text = "Hi, ${authState.currentUser?.fullName ?: "Shipper"}",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Your Assigned Orders",
+                        text = "ID: ${authState.currentUser?.id?.substringBefore("-") ?: ""}",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Your Assigned Orders",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

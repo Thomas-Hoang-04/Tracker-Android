@@ -33,7 +33,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.thomas.cargotracker.ui.components.SecureTextField
-import com.thomas.cargotracker.ui.viewmodel.UserViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.UserViewModel
 import kotlinx.coroutines.flow.collectLatest
 
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)

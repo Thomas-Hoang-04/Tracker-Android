@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -20,17 +22,33 @@ import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
 import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
 
 @Composable
 fun CustomerHomeScreen(
     onOrderDetails: (String) -> Unit,
-    viewModel: CustomerViewModel = hiltViewModel()
+    onCreateOrder: () -> Unit,
+    viewModel: CustomerViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel
 ) {
     val orders by viewModel.orders.collectAsState()
-    val activeOrders = orders.filter { it.status != "Delivered" && it.status != "Cancelled" }
+    val authState by authViewModel.authState.collectAsState()
+    val activeOrders = orders.filter { it.status.name != "DELIVERED" && it.status.name != "CANCELLED" }
 
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background
+        containerColor = MaterialTheme.colorScheme.background,
+        floatingActionButton = {
+            androidx.compose.material3.FloatingActionButton(
+                onClick = onCreateOrder,
+                containerColor = MaterialTheme.colorScheme.primary,
+                contentColor = MaterialTheme.colorScheme.onPrimary
+            ) {
+                androidx.compose.material3.Icon(
+                    Icons.Default.Add,
+                    contentDescription = "Create Order"
+                )
+            }
+        }
     ) { innerPadding ->
         LazyColumn(
             modifier = Modifier
@@ -44,15 +62,20 @@ fun CustomerHomeScreen(
             item {
                 Column(modifier = Modifier.padding(bottom = 8.dp)) {
                     Text(
-                        text = "Hi, Customer",
+                        text = "Hi, ${authState.currentUser?.fullName ?: "Customer"}",
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "Track your shipments",
+                        text = "ID: ${authState.currentUser?.id?.substringBefore("-") ?: ""}",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Track your shipments",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }

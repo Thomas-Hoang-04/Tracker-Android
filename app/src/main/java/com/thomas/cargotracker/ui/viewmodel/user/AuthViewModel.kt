@@ -1,4 +1,4 @@
-package com.thomas.cargotracker.ui.viewmodel.user
+package com.thomas.cargotracker.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -21,7 +21,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     private val authRepository: AuthRepository,
-    private val userRepository: UserRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
 
     private val _authState = MutableStateFlow(AuthState())
@@ -56,7 +56,8 @@ class AuthViewModel @Inject constructor(
     }
 
     private suspend fun loadCurrentUser() {
-        when (val result = userRepository.getCurrentUser()) {
+        val result = userRepository.getCurrentUser()
+        when (result) {
             is Result.Success -> {
                 _authState.update {
                     it.copy(
@@ -98,7 +99,8 @@ class AuthViewModel @Inject constructor(
 
         viewModelScope.launch {
             _loginState.update { it.copy(isLoading = true, error = null) }
-            when (val result = authRepository.login(state.email, state.password)) {
+            val result = authRepository.login(state.email, state.password)
+            when (result) {
                 is Result.Success -> {
                     _loginState.update { it.copy(isLoading = false, isSuccess = true) }
                     _authState.update {
@@ -165,7 +167,7 @@ class AuthViewModel @Inject constructor(
 
         viewModelScope.launch {
             _registerState.update { it.copy(isLoading = true, error = null) }
-            when (val result = authRepository.register(
+            val result = authRepository.register(
                 username = state.username,
                 email = state.email,
                 password = state.password,
@@ -173,7 +175,8 @@ class AuthViewModel @Inject constructor(
                 fullName = state.fullName,
                 phoneNumber = state.phoneNumber.ifBlank { null },
                 address = state.address.ifBlank { null }
-            )) {
+            )
+            when (result) {
                 is Result.Success -> {
                     _registerState.update { it.copy(isLoading = false, isSuccess = true) }
                     _authState.update {
@@ -210,7 +213,8 @@ class AuthViewModel @Inject constructor(
 
         viewModelScope.launch {
             _forgotPasswordState.update { it.copy(isLoading = true, error = null) }
-            when (val result = authRepository.forgotPassword(state.email)) {
+            val result = authRepository.forgotPassword(state.email)
+            when (result) {
                 is Result.Success -> {
                     _forgotPasswordState.update {
                         it.copy(isLoading = false, isSuccess = true, message = result.data)
@@ -255,11 +259,12 @@ class AuthViewModel @Inject constructor(
 
         viewModelScope.launch {
             _resetPasswordState.update { it.copy(isLoading = true, error = null) }
-            when (val result = authRepository.resetPassword(
+            val result = authRepository.resetPassword(
                 token = state.token,
                 newPassword = state.newPassword,
                 confirmPassword = state.confirmPassword
-            )) {
+            )
+            when (result) {
                 is Result.Success -> {
                     _resetPasswordState.update {
                         it.copy(isLoading = false, isSuccess = true, message = result.data)

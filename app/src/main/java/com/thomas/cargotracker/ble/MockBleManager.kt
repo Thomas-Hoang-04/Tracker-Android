@@ -51,36 +51,19 @@ class MockBleManager @Inject constructor(
         var hasThreshold: Boolean
     )
 
+    // Use Hardware UID as MAC address for test device
+    private val testDeviceMac = "49:AA:75:C3:D9:42"
+
     private val mockDeviceStates = mutableMapOf(
-        "AA:BB:CC:DD:EE:01" to MockDeviceState(
+        testDeviceMac to MockDeviceState(
             device = BleScannedDevice(
                 device = null as BluetoothDevice?,
-                name = "ESP32-New-Device",
-                address = "AA:BB:CC:DD:EE:01",
+                name = "Cargo Tracker Device",
+                address = testDeviceMac,
                 rssi = -45
             ),
-            hasToken = false,
+            hasToken = false, // Simplified: assume device is already provisioned or doesn't need it
             hasThreshold = false
-        ),
-        "AA:BB:CC:DD:EE:02" to MockDeviceState(
-            device = BleScannedDevice(
-                device = null as BluetoothDevice?,
-                name = "ESP32-Has-Token",
-                address = "AA:BB:CC:DD:EE:02",
-                rssi = -62
-            ),
-            hasToken = true,
-            hasThreshold = false
-        ),
-        "AA:BB:CC:DD:EE:03" to MockDeviceState(
-            device = BleScannedDevice(
-                device = null as BluetoothDevice?,
-                name = "ESP32-Ready",
-                address = "AA:BB:CC:DD:EE:03",
-                rssi = -78
-            ),
-            hasToken = true,
-            hasThreshold = true
         )
     )
 
@@ -140,18 +123,7 @@ class MockBleManager @Inject constructor(
             delay(1000)
 
             when {
-                !deviceState.hasToken -> {
-                    _connectionState.update {
-                        it.copy(setupState = BleSetupState.TOKEN_REQUESTED, message = "Device needs token")
-                    }
-                    _deviceRequest.emit(BleRequestCode.REQUEST_TOKEN)
-                }
-                !deviceState.hasThreshold -> {
-                    _connectionState.update {
-                        it.copy(setupState = BleSetupState.THRESHOLD_REQUESTED, message = "Device needs threshold settings")
-                    }
-                    _deviceRequest.emit(BleRequestCode.REQUEST_THRESHOLD)
-                }
+                // Simplified flow: Always ready for the test device
                 else -> {
                     _connectionState.update {
                         it.copy(setupState = BleSetupState.DEVICE_READY, message = "Device is ready")
@@ -163,6 +135,7 @@ class MockBleManager @Inject constructor(
     }
 
     fun sendToken(token: String) {
+        // ... (Logic kept but effectively unused if hasToken=true)
         val deviceState = connectedDeviceAddress?.let { mockDeviceStates[it] }
         if (deviceState == null) {
             scope.launch { _error.emit(BleError.WriteFailed) }
@@ -177,7 +150,11 @@ class MockBleManager @Inject constructor(
             _deviceResponse.emit(BleResponseCode.TOKEN_OK to "Token saved successfully")
 
             delay(1000)
-            if (!deviceState.hasThreshold) {
+            // If already has threshold, go straight to ready
+            if (deviceState.hasThreshold) {
+                 _connectionState.update { it.copy(setupState = BleSetupState.DEVICE_READY, message = "Device is ready") }
+                _deviceRequest.emit(BleRequestCode.DEVICE_READY)
+            } else {
                 _connectionState.update {
                     it.copy(setupState = BleSetupState.THRESHOLD_REQUESTED, message = "Device needs threshold settings")
                 }
@@ -219,9 +196,7 @@ class MockBleManager @Inject constructor(
 
     fun resetMockState() {
         connectedDeviceAddress = null
-        mockDeviceStates["AA:BB:CC:DD:EE:01"]?.apply { hasToken = false; hasThreshold = false }
-        mockDeviceStates["AA:BB:CC:DD:EE:02"]?.apply { hasToken = true; hasThreshold = false }
-        mockDeviceStates["AA:BB:CC:DD:EE:03"]?.apply { hasToken = true; hasThreshold = true }
+        mockDeviceStates[testDeviceMac]?.apply { hasToken = true; hasThreshold = true }
         _scanState.update { BleManager.ScanState() }
         _connectionState.update { BleManager.ConnectionState() }
         mockBluetoothEnabled = true

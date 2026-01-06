@@ -1,8 +1,5 @@
 package com.thomas.cargotracker.dto
 
-import java.util.UUID
-import java.time.Instant
-
 data class TelemetryResponse(
     val deviceId: String,
     val time: String,

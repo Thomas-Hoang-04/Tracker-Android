@@ -43,10 +43,12 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.thomas.cargotracker.ui.components.AuthTextField
 import com.thomas.cargotracker.ui.components.PrimaryButton
 import com.thomas.cargotracker.ui.components.SecondaryButton
-import com.thomas.cargotracker.ui.viewmodel.user.AuthViewModel
+import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,17 +92,25 @@ fun ForgotPasswordScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.primary)
+                .background(
+                    brush = Brush.verticalGradient(
+                        colors = listOf(
+                            MaterialTheme.colorScheme.primary,
+                            MaterialTheme.colorScheme.tertiaryContainer
+                        )
+                    )
+                )
                 .padding(padding)
         ) {
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState())
-                    .imePadding(),
+                    .imePadding()
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.weight(0.2f))
 
                 // Header
                 Icon(
@@ -129,27 +139,30 @@ fun ForgotPasswordScreen(
                     color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.8f)
                 )
 
-                Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.weight(0.8f))
+                Spacer(modifier = Modifier.height(32.dp))
 
-                // Form Card
+                // Form Card - Bottom Sheet Style
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .weight(1f),
-                    shape = MaterialTheme.shapes.extraLarge,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(
+                        topStart = 32.dp,
+                        topEnd = 32.dp,
+                        bottomStart = 0.dp,
+                        bottomEnd = 0.dp
+                    ),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surface
-                    )
+                        containerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.95f)
+                    ),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
                     Column(
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(24.dp),
-                        verticalArrangement = Arrangement.Top,
+                            .fillMaxWidth()
+                            .padding(top = 32.dp, start = 24.dp, end = 24.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
                         horizontalAlignment = Alignment.CenterHorizontally
                     ) {
-                        Spacer(modifier = Modifier.height(24.dp))
-
                         if (forgotPasswordState.isSuccess) {
                             // Success State
                             Text(
@@ -175,20 +188,18 @@ fun ForgotPasswordScreen(
                                 text = "Reset Password",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.fillMaxWidth()
+                                color = MaterialTheme.colorScheme.onSurface
                             )
-
-                            Spacer(modifier = Modifier.height(8.dp))
 
                             Text(
                                 text = "Enter the email address associated with your account and we'll send you a link to reset your password.",
                                 style = MaterialTheme.typography.bodyMedium,
+                                textAlign = TextAlign.Center,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.fillMaxWidth()
                             )
 
-                            Spacer(modifier = Modifier.height(32.dp))
+                            Spacer(modifier = Modifier.height(16.dp))
 
                             AuthTextField(
                                 value = forgotPasswordState.email,
@@ -215,7 +226,7 @@ fun ForgotPasswordScreen(
                                 isLoading = forgotPasswordState.isLoading
                             )
 
-                            Spacer(modifier = Modifier.height(16.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
 
                             SecondaryButton(
                                 text = "Back to Login",
@@ -226,8 +237,9 @@ fun ForgotPasswordScreen(
                                 enabled = !forgotPasswordState.isLoading
                             )
                         }
-
-                        Spacer(modifier = Modifier.weight(1f))
+                        
+                        // Extra padding for bottom
+                        Spacer(modifier = Modifier.height(24.dp))
                     }
                 }
             }

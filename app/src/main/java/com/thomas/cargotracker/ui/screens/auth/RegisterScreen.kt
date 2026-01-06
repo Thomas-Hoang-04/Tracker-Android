@@ -43,13 +43,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.foundation.shape.RoundedCornerShape
 import com.thomas.cargotracker.ui.components.AuthTextField
-import com.thomas.cargotracker.ui.components.PasswordTextField
+import com.thomas.cargotracker.ui.components.SecureTextField
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.collectLatest
+import androidx.compose.foundation.ExperimentalFoundationApi
 import com.thomas.cargotracker.ui.components.PrimaryButton
 import com.thomas.cargotracker.ui.components.SecondaryButton
-import com.thomas.cargotracker.ui.viewmodel.user.AuthViewModel
+import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun RegisterScreen(
     authViewModel: AuthViewModel,
@@ -59,6 +66,34 @@ fun RegisterScreen(
     val registerState by authViewModel.registerState.collectAsState()
     val focusManager = LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Password States
+    val passwordState = rememberTextFieldState(registerState.password)
+    val confirmPasswordState = rememberTextFieldState(registerState.confirmPassword)
+
+    // Sync ViewModel reset/update to TextFieldState
+    LaunchedEffect(registerState.password) {
+        if (passwordState.text.toString() != registerState.password) {
+            passwordState.setTextAndPlaceCursorAtEnd(registerState.password)
+        }
+    }
+    LaunchedEffect(registerState.confirmPassword) {
+        if (confirmPasswordState.text.toString() != registerState.confirmPassword) {
+            confirmPasswordState.setTextAndPlaceCursorAtEnd(registerState.confirmPassword)
+        }
+    }
+
+    // Sync TextFieldState to ViewModel
+    LaunchedEffect(passwordState) {
+        snapshotFlow { passwordState.text }.collectLatest {
+            if (it.toString() != registerState.password) authViewModel.updateRegisterPassword(it.toString())
+        }
+    }
+    LaunchedEffect(confirmPasswordState) {
+        snapshotFlow { confirmPasswordState.text }.collectLatest {
+            if (it.toString() != registerState.confirmPassword) authViewModel.updateRegisterConfirmPassword(it.toString())
+        }
+    }
 
     LaunchedEffect(registerState.isSuccess) {
         if (registerState.isSuccess) {
@@ -81,7 +116,7 @@ fun RegisterScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    brush = Brush.verticalGradient(
                         colors = listOf(
                             MaterialTheme.colorScheme.primary,
                             MaterialTheme.colorScheme.tertiaryContainer
@@ -118,7 +153,7 @@ fun RegisterScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f), // Fill remaining space
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                    shape = RoundedCornerShape(
                         topStart = 32.dp,
                         topEnd = 32.dp,
                         bottomStart = 0.dp,
@@ -204,27 +239,18 @@ fun RegisterScreen(
                                 enabled = !registerState.isLoading
                             )
 
-                            PasswordTextField(
-                                value = registerState.password,
-                                onValueChange = { authViewModel.updateRegisterPassword(it) },
+                            SecureTextField(
+                                state = passwordState,
                                 label = "Password",
                                 leadingIcon = Icons.Default.Lock,
                                 imeAction = ImeAction.Next,
-                                onImeAction = { focusManager.moveFocus(FocusDirection.Down) },
-                                enabled = !registerState.isLoading
                             )
 
-                            PasswordTextField(
-                                value = registerState.confirmPassword,
-                                onValueChange = { authViewModel.updateRegisterConfirmPassword(it) },
+                            SecureTextField(
+                                state = confirmPasswordState,
                                 label = "Confirm Password",
                                 leadingIcon = Icons.Default.Lock,
                                 imeAction = ImeAction.Done,
-                                onImeAction = {
-                                    focusManager.clearFocus()
-                                    authViewModel.register()
-                                },
-                                enabled = !registerState.isLoading
                             )
                         }
 

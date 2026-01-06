@@ -27,9 +27,15 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+object TestDeviceData {
+    const val DEVICE_ID = "88e4a1fc-2939-4787-bb68-d52b0d7d30cf"
+    const val HARDWARE_UID = "49aa75c3-d942-4a13-8a75-34a93a32362e"
+    const val PROVIDER_ID = "e811533d-1f5a-4eee-9456-b33d682969d8"
+}
+
 @HiltViewModel
 class BleViewModel @Inject constructor(
-    @field:ApplicationContext private val context: Context,
+    @param:ApplicationContext private val context: Context,
     private val bleManager: BleManager,
     private val mockBleManager: MockBleManager
 ) : ViewModel() {
@@ -71,7 +77,8 @@ class BleViewModel @Inject constructor(
                                 showTokenInput = false, 
                                 showThresholdInput = false,
                                 setupComplete = true,
-                                successMessage = "Device provisioned successfully!"
+                                successMessage = "Device provisioned successfully!",
+                                provisionedDeviceId = TestDeviceData.DEVICE_ID
                             ) 
                         }
                     }
@@ -100,7 +107,8 @@ class BleViewModel @Inject constructor(
                             it.copy(
                                 showThresholdInput = false, 
                                 setupComplete = true,
-                                successMessage = message ?: "Thresholds saved"
+                                successMessage = message ?: "Thresholds saved",
+                                provisionedDeviceId = TestDeviceData.DEVICE_ID
                             ) 
                         }
                     }
@@ -269,5 +277,6 @@ data class BleUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val successMessage: String? = null,
-    val setupComplete: Boolean = false
+    val setupComplete: Boolean = false,
+    val provisionedDeviceId: String? = null
 )

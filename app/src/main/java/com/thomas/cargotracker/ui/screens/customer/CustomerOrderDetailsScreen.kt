@@ -27,13 +27,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
-import com.thomas.cargotracker.data.model.OrderSummary
+import com.thomas.cargotracker.domain.model.Shipment
 import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,10 +43,16 @@ fun CustomerOrderDetailsScreen(
     viewModel: CustomerViewModel = hiltViewModel()
 ) {
     val orders by viewModel.orders.collectAsState()
-    val order = orders.find { it.id == orderId } ?: OrderSummary(
-        id = orderId, 
-        customerName = "Unknown", 
-        productType = "Unknown"
+    val order = orders.find { it.id == orderId } ?: Shipment(
+        id = orderId,
+        trackingId = orderId.take(8),
+        status = com.thomas.cargotracker.data.model.ShipmentStatus.PENDING, // Helper/Fallback 
+        description = "Unknown",
+        origin = "Unknown",
+        destination = "Unknown",
+        senderId = "Unknown",
+        receiverId = "Unknown",
+        customerName = "Unknown"
     )
 
     Scaffold(
@@ -100,9 +106,9 @@ fun CustomerOrderDetailsScreen(
             // Route Info
             Card(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Order #${order.id}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("From: New York, NY", style = MaterialTheme.typography.bodyMedium)
-                    Text("To: Los Angeles, CA", style = MaterialTheme.typography.bodyMedium)
+                    Text("Order #${order.trackingId}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("From: ${order.origin}", style = MaterialTheme.typography.bodyMedium)
+                    Text("To: ${order.destination}", style = MaterialTheme.typography.bodyMedium)
                 }
             }
 

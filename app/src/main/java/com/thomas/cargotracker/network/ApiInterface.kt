@@ -1,15 +1,29 @@
 package com.thomas.cargotracker.network
 
-import com.thomas.cargotracker.dto.*
+import com.thomas.cargotracker.dto.AdminCreateUserRequest
+import com.thomas.cargotracker.dto.AssignDeviceRequest
+import com.thomas.cargotracker.dto.AssignShipperRequest
+import com.thomas.cargotracker.dto.CancelShipmentRequest
+import com.thomas.cargotracker.dto.ChangePasswordRequest
+import com.thomas.cargotracker.dto.CompleteShipmentRequest
+import com.thomas.cargotracker.dto.CreateShipmentRequest
+import com.thomas.cargotracker.dto.LocationResponse
+import com.thomas.cargotracker.dto.ShipmentFilterRequest
+import com.thomas.cargotracker.dto.ShipmentListResponse
+import com.thomas.cargotracker.dto.ShipmentResponse
+import com.thomas.cargotracker.dto.ShipmentStatus
+import com.thomas.cargotracker.dto.SuccessResponse
+import com.thomas.cargotracker.dto.TelemetryResponse
+import com.thomas.cargotracker.dto.UpdateProfileRequest
+import com.thomas.cargotracker.dto.UpdateShipmentRequest
+import com.thomas.cargotracker.dto.UserResponse
+import com.thomas.cargotracker.dto.UserRole
 import retrofit2.Response
 import retrofit2.http.Body
-import retrofit2.http.DELETE
 import retrofit2.http.GET
-import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.PUT
 import retrofit2.http.Path
-import retrofit2.http.Query
 
 interface ApiInterface {
     // User Endpoints (/api/users)
@@ -32,78 +46,40 @@ interface ApiInterface {
         @Path("id") id: String
     ): Response<UserResponse>
 
-    // Device Endpoints (/api/devices)
+    // Admin User Management
 
-    @POST("api/devices")
-    suspend fun createDevice(
-        @Body request: CreateDeviceRequest
-    ): Response<DeviceResponse>
+    @GET("api/users")
+    suspend fun getAllUsers(): Response<List<UserResponse>>
 
-    @GET("api/devices/{id}")
-    suspend fun getDeviceById(
+    @GET("api/users/role/{role}")
+    suspend fun getUsersByRole(
+        @Path("role") role: UserRole
+    ): Response<List<UserResponse>>
+
+    @POST("api/auth/admin/users")
+    suspend fun createUserByAdmin(
+        @Body request: AdminCreateUserRequest
+    ): Response<UserResponse>
+
+    @POST("api/users/{id}/activate")
+    suspend fun activateUser(
         @Path("id") id: String
-    ): Response<DeviceResponse>
+    ): Response<SuccessResponse>
 
-    @GET("api/devices")
-    suspend fun getAllDevices(): Response<List<DeviceResponse>>
-
-    @GET("api/devices/status/{status}")
-    suspend fun getDevicesByStatus(
-        @Path("status") status: DeviceStatus
-    ): Response<List<DeviceResponse>>
-
-    @GET("api/devices/hardware/{hardwareUid}")
-    suspend fun getDeviceByHardwareUid(
-        @Path("hardwareUid") hardwareUid: String
-    ): Response<DeviceResponse>
-
-    @GET("api/devices/offline")
-    suspend fun getOfflineDevices(
-        @Query("thresholdMillis") thresholdMillis: Long = 300000
-    ): Response<List<DeviceResponse>>
-
-    @GET("api/devices/online")
-    suspend fun getOnlineDevices(
-        @Query("thresholdMillis") thresholdMillis: Long = 300000
-    ): Response<List<DeviceResponse>>
-
-    @GET("api/devices/shipment/{shipmentId}")
-    suspend fun getDevicesByShipmentId(
-        @Path("shipmentId") shipmentId: String
-    ): Response<List<DeviceResponse>>
-
-    @PUT("api/devices/{id}")
-    suspend fun updateDevice(
-        @Path("id") id: String,
-        @Body request: UpdateDeviceRequest
-    ): Response<DeviceResponse>
-
-    @PATCH("api/devices/{id}/status")
-    suspend fun updateDeviceStatus(
-        @Path("id") id: String,
-        @Body request: UpdateStatusRequest
-    ): Response<DeviceResponse>
-
-    @DELETE("api/devices/{id}")
-    suspend fun deleteDevice(
+    @POST("api/users/{id}/deactivate")
+    suspend fun deactivateUser(
         @Path("id") id: String
-    ): Response<Unit>
+    ): Response<SuccessResponse>
 
-    @POST("api/devices/{id}/assign/{shipmentId}")
-    suspend fun assignDeviceToShipment(
-        @Path("id") deviceId: String,
-        @Path("shipmentId") shipmentId: String
-    ): Response<DeviceResponse>
-
-    @POST("api/devices/{id}/release")
-    suspend fun releaseDeviceFromShipment(
+    @GET("api/devices/{id}/telemetry")
+    suspend fun getDeviceTelemetry(
         @Path("id") id: String
-    ): Response<DeviceResponse>
+    ): Response<TelemetryResponse>
 
-    @POST("api/devices/filter")
-    suspend fun filterDevices(
-        @Body request: DeviceFilterRequest
-    ): Response<DeviceListResponse>
+    @GET("api/devices/{id}/location")
+    suspend fun getDeviceLocation(
+        @Path("id") id: String
+    ): Response<LocationResponse>
 
     // Shipment Endpoints (/api/shipments)
 
