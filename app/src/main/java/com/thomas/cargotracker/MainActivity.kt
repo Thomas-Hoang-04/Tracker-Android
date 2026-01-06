@@ -15,7 +15,7 @@ import com.thomas.cargotracker.dto.UserRole
 import com.thomas.cargotracker.ui.navigation.AuthNavigation
 import com.thomas.cargotracker.ui.navigation.MainNavigation
 import com.thomas.cargotracker.ui.theme.CargoTrackerTheme
-import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.AuthViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint

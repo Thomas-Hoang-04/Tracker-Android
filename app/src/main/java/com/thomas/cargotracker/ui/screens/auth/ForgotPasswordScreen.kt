@@ -46,7 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.thomas.cargotracker.ui.components.AuthTextField
 import com.thomas.cargotracker.ui.components.PrimaryButton
 import com.thomas.cargotracker.ui.components.SecondaryButton
-import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.AuthViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
