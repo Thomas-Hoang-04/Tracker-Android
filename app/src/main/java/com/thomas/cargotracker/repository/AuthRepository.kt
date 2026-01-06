@@ -11,8 +11,11 @@ import com.thomas.cargotracker.dto.ResetPasswordRequest
 import com.thomas.cargotracker.dto.TokenResponse
 import com.thomas.cargotracker.keystore.TokenManager
 import com.thomas.cargotracker.network.AuthInterface
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class AuthRepository(
+@Singleton
+class AuthRepository @Inject constructor(
     private val authInterface: AuthInterface,
     private val tokenManager: TokenManager,
     gson: Gson

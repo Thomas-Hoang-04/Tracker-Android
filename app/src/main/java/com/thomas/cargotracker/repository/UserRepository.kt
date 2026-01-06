@@ -6,8 +6,11 @@ import com.thomas.cargotracker.dto.UpdateProfileRequest
 import com.thomas.cargotracker.dto.UserResponse
 import com.thomas.cargotracker.network.ApiInterface
 import com.thomas.cargotracker.network.Result
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class UserRepository(
+@Singleton
+class UserRepository @Inject constructor(
     private val apiInterface: ApiInterface,
     gson: Gson
 ): BaseRepository(gson) {
