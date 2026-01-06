@@ -10,8 +10,11 @@ import com.thomas.cargotracker.dto.UpdateDeviceRequest
 import com.thomas.cargotracker.dto.UpdateStatusRequest
 import com.thomas.cargotracker.network.ApiInterface
 import com.thomas.cargotracker.network.Result
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class DeviceRepository(
+@Singleton
+class DeviceRepository @Inject constructor(
     private val apiInterface: ApiInterface,
     gson: Gson
 ): BaseRepository(gson) {
