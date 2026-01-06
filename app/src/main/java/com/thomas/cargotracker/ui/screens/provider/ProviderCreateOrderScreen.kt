@@ -71,25 +71,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.thomas.cargotracker.data.model.OrderSummary
+import com.thomas.cargotracker.domain.model.Shipment
 import com.thomas.cargotracker.dto.ThresholdSettings
 import com.thomas.cargotracker.ui.components.PrimaryButton
 import com.thomas.cargotracker.ui.components.SecondaryButton
 import com.thomas.cargotracker.ui.state.BleScannedDevice
 import com.thomas.cargotracker.ui.state.BleSetupState
+import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
 import com.thomas.cargotracker.ui.viewmodel.BleViewModel
 import com.thomas.cargotracker.ui.viewmodel.user.ProviderViewModel
 
-data class MockCustomer(val name: String, val id: String, val role: String = "Customer")
+data class MockShipper(val name: String, val id: String, val role: String = "Shipper")
 
 enum class CreateOrderStep {
-    FIND_CUSTOMER,
-    ORDER_INFO,
+    SELECT_ORDER,
+    FIND_SHIPPER,
     CONNECT_DEVICE,
     SETUP_THRESHOLD
 }
@@ -99,30 +99,37 @@ enum class CreateOrderStep {
 fun ProviderCreateOrderScreen(
     onOrderCreated: () -> Unit,
     viewModel: ProviderViewModel = hiltViewModel(),
-    bleViewModel: BleViewModel = hiltViewModel()
+    bleViewModel: BleViewModel = hiltViewModel(),
+    authViewModel: AuthViewModel = hiltViewModel()
 ) {
-    var currentStep by remember { mutableStateOf(CreateOrderStep.FIND_CUSTOMER) }
+    val authState by authViewModel.authState.collectAsState()
+    var currentStep by remember { mutableStateOf(CreateOrderStep.SELECT_ORDER) }
     
-    var customerSearch by remember { mutableStateOf("") }
-    var selectedCustomer by remember { mutableStateOf<String?>(null) }
+    var orderSearch by remember { mutableStateOf("") }
+    var selectedOrder by remember { mutableStateOf<Shipment?>(null) }
     
-    var orderName by remember { mutableStateOf("") }
-    var productType by remember { mutableStateOf("Container") }
+    var shipperSearch by remember { mutableStateOf("") }
+    var selectedShipper by remember { mutableStateOf<MockShipper?>(null) }
 
     var selectedDevice by remember { mutableStateOf<BleScannedDevice?>(null) }
     var tokenInput by remember { mutableStateOf("") }
     
     var tempMin by remember { mutableStateOf("20.0") }
     var tempMax by remember { mutableStateOf("30.0") }
-    
     var humidityMin by remember { mutableStateOf("30.0") }
     var humidityMax by remember { mutableStateOf("60.0") }
-    
     var gasThreshold by remember { mutableStateOf("100") }
     var accelThreshold by remember { mutableStateOf("1.0") }
     var gyroThreshold by remember { mutableStateOf("1.0") }
-    
     var readPeriodMs by remember { mutableStateOf("30000") }
+
+    val orders by viewModel.orders.collectAsState()
+    val unprovisionedOrders = remember(orders) {
+        orders.filter { it.status.name == "PENDING" || (it.status.name == "ASSIGNED" && it.deviceId == null) }
+    }
+    val filteredOrders = if (orderSearch.isEmpty()) unprovisionedOrders else unprovisionedOrders.filter { 
+        it.id.contains(orderSearch, ignoreCase = true) || it.description.contains(orderSearch, ignoreCase = true)
+    }
 
     val scanState by bleViewModel.scanState.collectAsState()
     val connectionState by bleViewModel.connectionState.collectAsState()
@@ -135,11 +142,10 @@ fun ProviderCreateOrderScreen(
     var showDeviceReadyDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
     
-    // Reset BLE state when entering the screen
     LaunchedEffect(Unit) {
         bleViewModel.resetState()
+        viewModel.loadOrders()
     }
-
 
     val enableBluetoothLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
@@ -167,14 +173,9 @@ fun ProviderCreateOrderScreen(
     )
 
     val requiredPermissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-        arrayOf(
-            Manifest.permission.BLUETOOTH_SCAN,
-            Manifest.permission.BLUETOOTH_CONNECT
-        )
+        arrayOf(Manifest.permission.BLUETOOTH_SCAN, Manifest.permission.BLUETOOTH_CONNECT)
     } else {
-        arrayOf(
-            Manifest.permission.ACCESS_FINE_LOCATION
-        )
+        arrayOf(Manifest.permission.ACCESS_FINE_LOCATION)
     }
 
     LaunchedEffect(currentStep) {
@@ -210,19 +211,31 @@ fun ProviderCreateOrderScreen(
         }
     }
 
-    val handleCreateOrder = {
-        val newOrder = OrderSummary(
-            id = "ORD-${System.currentTimeMillis() % 10000}",
-            customerName = selectedCustomer?.substringBefore(" (ID") ?: "Unknown",
-            productType = productType.ifEmpty { "General Cargo" },
-            tempMin = tempMin,
-            tempMax = tempMax,
-            humidityMin = humidityMin,
-            humidityMax = humidityMax
-        )
-        viewModel.createOrder(newOrder)
-        bleViewModel.disconnect()
-        onOrderCreated()
+    val createOrderState by viewModel.createOrderState.collectAsState()
+
+    val handleProvisionOrder = {
+        if (selectedOrder != null) {
+            viewModel.provisionOrder(
+                shipmentId = selectedOrder!!.id,
+                deviceId = bleUiState.provisionedDeviceId ?: "",
+                shipperId = selectedShipper?.id
+            )
+        }
+    }
+
+    LaunchedEffect(createOrderState) {
+        when (val state = createOrderState) {
+            is ProviderViewModel.CreateOrderState.Success -> {
+                bleViewModel.disconnect()
+                viewModel.resetCreateOrderState()
+                onOrderCreated()
+            }
+            is ProviderViewModel.CreateOrderState.Error -> {
+                snackbarHostState.showSnackbar(state.message)
+                viewModel.resetCreateOrderState()
+            }
+            else -> {}
+        }
     }
 
     LaunchedEffect(bleUiState.setupComplete) {
@@ -233,7 +246,7 @@ fun ProviderCreateOrderScreen(
 
     if (showSuccessDialog) {
         AlertDialog(
-            onDismissRequest = { }, // Force user to click OK
+            onDismissRequest = { },
             icon = { 
                 Icon(
                     Icons.Default.CheckCircle, 
@@ -248,7 +261,7 @@ fun ProviderCreateOrderScreen(
                 TextButton(
                     onClick = {
                         showSuccessDialog = false
-                        handleCreateOrder()
+                        handleProvisionOrder()
                     }
                 ) {
                     Text("OK")
@@ -256,8 +269,6 @@ fun ProviderCreateOrderScreen(
             }
         )
     }
-
-
 
     if (showDeviceReadyDialog) {
         AlertDialog(
@@ -273,7 +284,7 @@ fun ProviderCreateOrderScreen(
             title = { Text("Device Ready") },
             text = {
                 Text(
-                    "This device is already configured. Would you like to reconfigure the sensor thresholds or proceed with creating the order?",
+                    "This device is already configured. Would you like to reconfigure the sensor thresholds or proceed with provisioning?",
                     textAlign = TextAlign.Center
                 )
             },
@@ -291,10 +302,10 @@ fun ProviderCreateOrderScreen(
                 TextButton(
                     onClick = {
                         showDeviceReadyDialog = false
-                        handleCreateOrder()
+                        handleProvisionOrder()
                     }
                 ) {
-                    Text("Skip & Create Order")
+                    Text("Skip & Provision")
                 }
             }
         )
@@ -342,46 +353,26 @@ fun ProviderCreateOrderScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             when (currentStep) {
-                CreateOrderStep.FIND_CUSTOMER -> {
-                    Text("Search for a customer to assign this order to.")
+                CreateOrderStep.SELECT_ORDER -> {
+                    Text("Select an order to provision with a device.")
                     OutlinedTextField(
-                        value = customerSearch,
-                        onValueChange = { customerSearch = it },
+                        value = orderSearch,
+                        onValueChange = { orderSearch = it },
                         modifier = Modifier.fillMaxWidth(),
-                        label = { Text("Customer ID or Name") },
+                        label = { Text("Search Order ID or Description") },
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         singleLine = true
                     )
                     
-                    // Mock Data
-                    val mockCustomers = remember {
-                        listOf(
-                            MockCustomer("Alice Smith", "1001"),
-                            MockCustomer("Bob Jones", "1002"),
-                            MockCustomer("Charlie Brown", "1003"),
-                            MockCustomer("Diana Prince", "1004"),
-                            MockCustomer("Evan Wright", "1005"),
-                            MockCustomer("Frank Castle", "1006"),
-                            MockCustomer("Grace Hopper", "1007")
-                        )
-                    }
-
-                    // Filtered List
-                    val filteredCustomers = if (customerSearch.isEmpty()) emptyList() else mockCustomers.filter {
-                        it.name.contains(customerSearch, ignoreCase = true) || it.id.contains(customerSearch, ignoreCase = true)
-                    }
-
                     LazyColumn(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxWidth(),
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        items(filteredCustomers) { customer ->
-                             Card(
-                                onClick = { selectedCustomer = "${customer.name} (ID: ${customer.id})" },
+                        items(filteredOrders) { order ->
+                            Card(
+                                onClick = { selectedOrder = order },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedCustomer?.contains(customer.id) == true) 
+                                    containerColor = if (selectedOrder?.id == order.id) 
                                         MaterialTheme.colorScheme.primaryContainer 
                                     else 
                                         MaterialTheme.colorScheme.surfaceVariant
@@ -389,19 +380,22 @@ fun ProviderCreateOrderScreen(
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Column(modifier = Modifier.padding(16.dp)) {
-                                    Text(customer.name, fontWeight = FontWeight.Bold)
-                                    Text("ID: ${customer.id}", style = MaterialTheme.typography.bodySmall)
-                                    Text("Role: ${customer.role}", style = MaterialTheme.typography.bodySmall)
+                                    Text("Order #${order.id.substringBefore("-")}", fontWeight = FontWeight.Bold)
+                                    Text(order.description, style = MaterialTheme.typography.bodyMedium)
+                                    Text("From: ${order.origin}", style = MaterialTheme.typography.bodySmall)
+                                    Text("To: ${order.destination}", style = MaterialTheme.typography.bodySmall)
                                 }
                             }
                         }
-                        if (filteredCustomers.isEmpty() && customerSearch.isNotEmpty()) {
+                        
+                        if (unprovisionedOrders.isEmpty()) {
                             item {
                                 Text(
-                                    "No customers found.",
+                                    text = "No pending orders found.",
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    modifier = Modifier.padding(vertical = 16.dp)
+                                    textAlign = TextAlign.Center,
+                                    modifier = Modifier.fillMaxWidth().padding(16.dp)
                                 )
                             }
                         }
@@ -409,50 +403,67 @@ fun ProviderCreateOrderScreen(
 
                     PrimaryButton(
                         text = "Next",
-                        onClick = { currentStep = CreateOrderStep.ORDER_INFO },
-                        enabled = selectedCustomer != null
+                        onClick = { currentStep = CreateOrderStep.FIND_SHIPPER },
+                        enabled = selectedOrder != null,
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
-                
-                CreateOrderStep.ORDER_INFO -> {
+
+                CreateOrderStep.FIND_SHIPPER -> {
+                    Text("Search for a shipper to transport this order (Optional).")
                     OutlinedTextField(
-                        value = orderName,
-                        onValueChange = { orderName = it },
-                        label = { Text("Order Name") },
+                        value = shipperSearch,
+                        onValueChange = { shipperSearch = it },
                         modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Next
-                        )
-                    )
-                     OutlinedTextField(
-                        value = productType,
-                        onValueChange = { productType = it },
-                        label = { Text("Type of Product") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(
-                            keyboardType = KeyboardType.Text,
-                            imeAction = ImeAction.Done
-                        )
+                        label = { Text("Shipper ID or Name") },
+                        leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                        singleLine = true
                     )
                     
-                    // Show selected Customer read-only
-                     Card(modifier = Modifier.fillMaxWidth()) {
-                        Column(modifier = Modifier.padding(16.dp)) {
-                            Text("Customer", style = MaterialTheme.typography.labelLarge)
-                            Text(selectedCustomer ?: "Unknown")
-                        }
+                    val mockShippers = remember {
+                        listOf(
+                            MockShipper("Shipper", "71ad6c6a-c19d-493a-9f4d-21b2edcab276")
+                        )
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        TextButton(onClick = { currentStep = CreateOrderStep.FIND_CUSTOMER }) { Text("Back") }
-                        Spacer(modifier = Modifier.weight(1f))
+                    val filteredShippers = if (shipperSearch.isEmpty()) emptyList() else mockShippers.filter {
+                        it.name.contains(shipperSearch, ignoreCase = true) || it.id.contains(shipperSearch, ignoreCase = true)
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(filteredShippers) { shipper ->
+                             Card(
+                                onClick = { selectedShipper = shipper },
+                                colors = CardDefaults.cardColors(
+                                    containerColor = if (selectedShipper?.id == shipper.id) 
+                                        MaterialTheme.colorScheme.primaryContainer 
+                                    else 
+                                        MaterialTheme.colorScheme.surfaceVariant
+                                ),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Text(shipper.name, fontWeight = FontWeight.Bold)
+                                    Text("ID: ${shipper.id}", style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
+                        }
+                    }
+                    
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        TextButton(onClick = { currentStep = CreateOrderStep.SELECT_ORDER }) { Text("Back") }
+                        
                         PrimaryButton(
-                            text = "Next",
+                            text = if (selectedShipper != null) "Next" else "Skip",
                             onClick = { currentStep = CreateOrderStep.CONNECT_DEVICE },
-                            enabled = orderName.isNotEmpty(),
-                            modifier = Modifier.weight(1f)
+                            modifier = Modifier.width(120.dp)
                         )
                     }
                 }
@@ -477,9 +488,7 @@ fun ProviderCreateOrderScreen(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
                         ) {
                             Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(16.dp),
+                                modifier = Modifier.fillMaxWidth().padding(16.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Icon(
@@ -511,17 +520,9 @@ fun ProviderCreateOrderScreen(
 
                     when {
                         isTokenRequested -> {
-                            Text(
-                                "Enter Device Token",
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.SemiBold
-                            )
+                            Text("Enter Device Token", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                             Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "The device is requesting a token for authentication.",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                            Text("The device is requesting a token for authentication.", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Spacer(modifier = Modifier.height(16.dp))
 
                             OutlinedTextField(
@@ -531,9 +532,7 @@ fun ProviderCreateOrderScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 singleLine = true,
                                 enabled = !bleUiState.isLoading,
-                                colors = OutlinedTextFieldDefaults.colors(
-                                    focusedBorderColor = MaterialTheme.colorScheme.primary
-                                )
+                                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = MaterialTheme.colorScheme.primary)
                             )
                             Spacer(modifier = Modifier.height(24.dp))
                             PrimaryButton(
@@ -572,25 +571,11 @@ fun ProviderCreateOrderScreen(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                    Icon(
-                                        Icons.Default.BluetoothDisabled,
-                                        contentDescription = null,
-                                        modifier = Modifier.size(64.dp),
-                                        tint = MaterialTheme.colorScheme.error
-                                    )
+                                    Icon(Icons.Default.BluetoothDisabled, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.error)
                                     Spacer(modifier = Modifier.height(16.dp))
-                                    Text(
-                                        "Bluetooth is disabled",
-                                        style = MaterialTheme.typography.titleMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    Text("Bluetooth is disabled", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Spacer(modifier = Modifier.height(8.dp))
-                                    Text(
-                                        "Please enable Bluetooth to scan for devices",
-                                        style = MaterialTheme.typography.bodyMedium,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        textAlign = TextAlign.Center
-                                    )
+                                    Text("Please enable Bluetooth to scan for devices", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, textAlign = TextAlign.Center)
                                     Spacer(modifier = Modifier.height(16.dp))
                                     PrimaryButton(
                                         text = "Enable Bluetooth",
@@ -622,18 +607,9 @@ fun ProviderCreateOrderScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Icon(
-                                            Icons.AutoMirrored.Filled.BluetoothSearching,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(64.dp),
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        Icon(Icons.AutoMirrored.Filled.BluetoothSearching, contentDescription = null, modifier = Modifier.size(64.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
                                         Spacer(modifier = Modifier.height(16.dp))
-                                        Text(
-                                            "No devices found",
-                                            style = MaterialTheme.typography.titleMedium,
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                                        )
+                                        Text("No devices found", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                         Spacer(modifier = Modifier.height(8.dp))
                                         SecondaryButton(
                                             text = "Scan Again",
@@ -667,33 +643,17 @@ fun ProviderCreateOrderScreen(
                                                     selectedDevice = device
                                                     bleViewModel.connectToDevice(device)
                                                 },
-                                            colors = CardDefaults.cardColors(
-                                                containerColor = MaterialTheme.colorScheme.surfaceVariant
-                                            )
+                                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
                                         ) {
                                             Row(
-                                                modifier = Modifier
-                                                    .fillMaxWidth()
-                                                    .padding(16.dp),
+                                                modifier = Modifier.fillMaxWidth().padding(16.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Icon(
-                                                    Icons.Default.Bluetooth,
-                                                    contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary
-                                                )
+                                                Icon(Icons.Default.Bluetooth, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                                 Spacer(modifier = Modifier.width(16.dp))
                                                 Column(modifier = Modifier.weight(1f)) {
-                                                    Text(
-                                                        device.name ?: "Unknown Device",
-                                                        style = MaterialTheme.typography.bodyLarge,
-                                                        fontWeight = FontWeight.Medium
-                                                    )
-                                                    Text(
-                                                        device.address,
-                                                        style = MaterialTheme.typography.bodySmall,
-                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                                    )
+                                                    Text(device.name ?: "Unknown Device", style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium)
+                                                    Text(device.address, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                                 }
                                                 Icon(
                                                     Icons.Default.SignalCellular4Bar,
@@ -721,7 +681,7 @@ fun ProviderCreateOrderScreen(
                             bleViewModel.disconnect()
                             selectedDevice = null
                             hasTriggeredScan = false
-                            currentStep = CreateOrderStep.ORDER_INFO
+                            currentStep = CreateOrderStep.FIND_SHIPPER
                         }) { Text("Back") }
                     }
                 }
@@ -740,7 +700,6 @@ fun ProviderCreateOrderScreen(
                             .verticalScroll(rememberScrollState())
                             .weight(1f)
                     ) {
-                        // Environment Card
                         ThresholdCard(title = "Environment", icon = Icons.Outlined.Thermostat) {
                             Text("Temperature Range: ${tempMin}°C - ${tempMax}°C", style = MaterialTheme.typography.bodySmall)
                             RangeSlider(
@@ -750,7 +709,7 @@ fun ProviderCreateOrderScreen(
                                     tempMax = range.endInclusive.toInt().toString()
                                 },
                                 valueRange = -20f..60f,
-                                steps = 79, // 1 degree steps roughly
+                                steps = 79,
                                 modifier = Modifier.fillMaxWidth()
                             )
 
@@ -769,7 +728,6 @@ fun ProviderCreateOrderScreen(
                             )
                         }
 
-                        // Motion Sensors Card
                         ThresholdCard(title = "Motion & Gas", icon = Icons.Outlined.Speed) {
                              Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 OutlinedTextField(
@@ -800,7 +758,6 @@ fun ProviderCreateOrderScreen(
                             )
                         }
 
-                        // Configuration Card
                         ThresholdCard(title = "Reporting", icon = Icons.Outlined.Timer) {
                             Text("Read Period", style = MaterialTheme.typography.bodySmall)
                             Row(
@@ -827,14 +784,13 @@ fun ProviderCreateOrderScreen(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = {
-                            // Don't disconnect, just go back to connection screen to view status or change device
                             currentStep = CreateOrderStep.CONNECT_DEVICE
                         }) { Text("Back") }
                         
                         Spacer(modifier = Modifier.width(16.dp))
                         
                         PrimaryButton(
-                            text = "Create Order",
+                            text = "Provision Order",
                             onClick = {
                                 bleViewModel.sendThresholds(
                                     ThresholdSettings(
@@ -884,8 +840,8 @@ fun ThresholdCard(
 
 private fun getTitleForStep(step: CreateOrderStep): String {
     return when(step) {
-        CreateOrderStep.FIND_CUSTOMER -> "Find Customer"
-        CreateOrderStep.ORDER_INFO -> "Create Order"
+        CreateOrderStep.SELECT_ORDER -> "Select Order"
+        CreateOrderStep.FIND_SHIPPER -> "Assign Shipper"
         CreateOrderStep.CONNECT_DEVICE -> "Connect Device"
         CreateOrderStep.SETUP_THRESHOLD -> "Setup Threshold"
     }

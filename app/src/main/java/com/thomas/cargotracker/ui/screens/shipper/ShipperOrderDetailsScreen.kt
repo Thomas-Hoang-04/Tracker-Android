@@ -27,13 +27,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.thomas.cargotracker.ui.viewmodel.user.ShipperViewModel
-import com.thomas.cargotracker.data.model.OrderSummary
 import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
+import com.thomas.cargotracker.domain.model.Shipment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.thomas.cargotracker.data.model.ShipmentStatus
+import com.thomas.cargotracker.ui.viewmodel.user.ShipperViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,10 +49,16 @@ fun ShipperOrderDetailsScreen(
     // Search in both lists
     val order = assigned.find { it.id == orderId } 
         ?: history.find { it.id == orderId }
-        ?: OrderSummary(
-            id = orderId, 
-            customerName = "Unknown", 
-            productType = "Unknown"
+        ?: Shipment(
+            id = orderId,
+            trackingId = orderId.take(8),
+            status = ShipmentStatus.PENDING,
+            description = "Unknown",
+            origin = "Unknown",
+            destination = "Unknown",
+            senderId = "Unknown",
+            receiverId = "Unknown",
+            customerName = "Unknown"
         )
 
     Scaffold(

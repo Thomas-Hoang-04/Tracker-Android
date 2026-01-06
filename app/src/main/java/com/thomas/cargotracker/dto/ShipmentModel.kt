@@ -1,5 +1,7 @@
 package com.thomas.cargotracker.dto
 
+import com.thomas.cargotracker.data.model.ShipmentStatus
+
 data class CreateShipmentRequest(
     val providerId: String,
     val goodsDescription: String,

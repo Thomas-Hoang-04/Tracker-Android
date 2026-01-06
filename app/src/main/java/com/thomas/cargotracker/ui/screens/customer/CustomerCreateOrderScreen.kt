@@ -1,6 +1,5 @@
 package com.thomas.cargotracker.ui.screens.customer
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,7 +42,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.thomas.cargotracker.ui.components.PrimaryButton
-import com.thomas.cargotracker.ui.viewmodel.CustomerViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
 
 data class MockProvider(val name: String, val id: String, val role: String = "Provider")
 

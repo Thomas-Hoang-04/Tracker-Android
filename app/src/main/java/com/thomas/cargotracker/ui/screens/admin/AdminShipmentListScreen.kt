@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
-import com.thomas.cargotracker.ui.viewmodel.ProviderViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.ProviderViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

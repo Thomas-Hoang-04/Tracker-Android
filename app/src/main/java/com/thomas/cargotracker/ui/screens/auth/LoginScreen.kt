@@ -1,5 +1,6 @@
 package com.thomas.cargotracker.ui.screens.auth
 
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,6 +14,9 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.input.rememberTextFieldState
+import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
@@ -31,20 +35,24 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.thomas.cargotracker.ui.components.AuthTextField
-import com.thomas.cargotracker.ui.components.PasswordTextField
 import com.thomas.cargotracker.ui.components.PrimaryButton
 import com.thomas.cargotracker.ui.components.SecondaryButton
-import com.thomas.cargotracker.ui.viewmodel.user.AuthViewModel
+import com.thomas.cargotracker.ui.components.SecureTextField
+import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
+import kotlinx.coroutines.flow.collectLatest
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun LoginScreen(
     authViewModel: AuthViewModel,
@@ -55,6 +63,23 @@ fun LoginScreen(
     val loginState by authViewModel.loginState.collectAsState()
     val focusManager = LocalFocusManager.current
     val snackbarHostState = remember { SnackbarHostState() }
+
+    // Password State
+    val passwordState = rememberTextFieldState(loginState.password)
+
+    // Sync ViewModel reset to TextFieldState
+    LaunchedEffect(loginState.password) {
+        if (passwordState.text.toString() != loginState.password) {
+            passwordState.setTextAndPlaceCursorAtEnd(loginState.password)
+        }
+    }
+
+    // Sync TextFieldState to ViewModel
+    LaunchedEffect(passwordState) {
+        snapshotFlow { passwordState.text }.collectLatest {
+            if (it.toString() != loginState.password) authViewModel.updateLoginPassword(it.toString())
+        }
+    }
 
     LaunchedEffect(loginState.isSuccess) {
         if (loginState.isSuccess) {
@@ -77,7 +102,7 @@ fun LoginScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .background(
-                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    brush = Brush.verticalGradient(
                         colors = listOf(
                             MaterialTheme.colorScheme.primary,
                             MaterialTheme.colorScheme.tertiaryContainer
@@ -128,7 +153,7 @@ fun LoginScreen(
                 // Login Form Card - Edge to Edge
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    shape = androidx.compose.foundation.shape.RoundedCornerShape(
+                    shape = RoundedCornerShape(
                         topStart = 32.dp,
                         topEnd = 32.dp,
                         bottomStart = 0.dp,
@@ -166,17 +191,11 @@ fun LoginScreen(
                             enabled = !loginState.isLoading
                         )
 
-                        PasswordTextField(
-                            value = loginState.password,
-                            onValueChange = { authViewModel.updateLoginPassword(it) },
+                        SecureTextField(
+                            state = passwordState,
                             label = "Password",
                             leadingIcon = Icons.Default.Lock,
                             imeAction = ImeAction.Done,
-                            onImeAction = {
-                                focusManager.clearFocus()
-                                authViewModel.login()
-                            },
-                            enabled = !loginState.isLoading
                         )
 
                         Row(

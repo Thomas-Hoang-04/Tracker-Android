@@ -15,6 +15,16 @@ data class RegisterRequest(
     val address: String? = null
 )
 
+data class AdminCreateUserRequest(
+    val email: String,
+    val password: String,
+    val confirmPassword: String,
+    val fullName: String,
+    val role: UserRole,
+    val phoneNumber: String? = null,
+    val address: String? = null
+)
+
 data class RefreshTokenRequest(
     val refreshToken: String
 )

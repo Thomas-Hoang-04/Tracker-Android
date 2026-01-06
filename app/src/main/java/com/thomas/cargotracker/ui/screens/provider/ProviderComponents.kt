@@ -3,6 +3,7 @@ package com.thomas.cargotracker.ui.screens.provider
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -27,10 +28,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.thomas.cargotracker.data.model.OrderSummary
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
+import com.thomas.cargotracker.domain.model.Shipment
 
 @Composable
 fun ProviderActionCard(
@@ -77,7 +75,7 @@ fun ProviderActionCard(
 
 @Composable
 fun ProviderOrderCard(
-    order: OrderSummary,
+    order: Shipment,
     onMoreDetailsClick: () -> Unit,
     modifier: Modifier = Modifier,
     border: BorderStroke = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
@@ -102,7 +100,7 @@ fun ProviderOrderCard(
             ) {
                 Column {
                     Text(
-                        text = "#${order.id}",
+                        text = "Shipment #${order.trackingId}",
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -115,20 +113,20 @@ fun ProviderOrderCard(
                 }
                 
                 Surface(
-                    color = when(order.status) {
-                        "Delivered" -> Color(0xFFE8F5E9) // Light Green
-                        "In Transit" -> Color(0xFFE3F2FD) // Light Blue
+                    color = when(order.status.name) {
+                        "DELIVERED" -> Color(0xFFE8F5E9) // Light Green
+                        "IN_TRANSIT" -> Color(0xFFE3F2FD) // Light Blue
                         else -> MaterialTheme.colorScheme.surfaceVariant
                     },
                     shape = RoundedCornerShape(8.dp)
                 ) {
                     Text(
-                        text = order.status,
+                        text = order.status.name, // Or a formatted string
                         style = MaterialTheme.typography.labelSmall,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        color = when(order.status) {
-                            "Delivered" -> Color(0xFF2E7D32) // Dark Green
-                            "In Transit" -> Color(0xFF1565C0) // Dark Blue
+                        color = when(order.status.name) {
+                            "DELIVERED" -> Color(0xFF2E7D32) // Dark Green
+                            "IN_TRANSIT" -> Color(0xFF1565C0) // Dark Blue
                             else -> MaterialTheme.colorScheme.onSurfaceVariant
                         }
                     )
@@ -140,18 +138,25 @@ fun ProviderOrderCard(
             // Stats Grid
             Row(modifier = Modifier.fillMaxWidth()) {
                 Column(modifier = Modifier.weight(1f)) {
-                    StatItem(label = "Product", value = order.productType)
+                    StatItem(label = "Product", value = order.description)
                     Spacer(modifier = Modifier.height(4.dp))
-                    StatItem(label = "Temp", value = order.temperature)
+                    StatItem(label = "Temp", value = order.sensorData?.temperature?.let { "$it°C" } ?: "N/A")
+                    Spacer(modifier = Modifier.height(4.dp))
+                    StatItem(
+                        label = "Battery", 
+                        value = order.sensorData?.batteryLevel?.let { "$it%" } ?: "N/A",
+                        valueColor = if ((order.sensorData?.batteryLevel ?: 0) < 20) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                    )
                 }
                 Column(modifier = Modifier.weight(1f)) {
-                    val formattedDate = DateTimeFormatter.ofPattern("dd/MM/yy, HH:mm")
-                        .withZone(ZoneId.systemDefault())
-                        .format(Instant.ofEpochMilli(order.createdDate))
-                    
-                    StatItem(label = "Created", value = formattedDate)
+                    StatItem(label = "Created", value = order.createdDate.take(10))
                     Spacer(modifier = Modifier.height(4.dp))
-                    StatItem(label = "Humidity", value = order.humidity)
+                    StatItem(label = "Humidity", value = order.sensorData?.humidity?.let { "$it%" } ?: "N/A")
+                    Spacer(modifier = Modifier.height(4.dp))
+                    StatItem(
+                        label = "Updated", 
+                        value = order.sensorData?.lastUpdated?.take(5) ?: "Just now" // Simplified for now
+                    )
                 }
             }
 
@@ -164,7 +169,7 @@ fun ProviderOrderCard(
             ) {
                 TextButton(
                     onClick = onMoreDetailsClick,
-                    contentPadding = androidx.compose.foundation.layout.PaddingValues(0.dp)
+                    contentPadding = PaddingValues(0.dp)
                 ) {
                     Text(
                         text = "More details",
@@ -177,7 +182,11 @@ fun ProviderOrderCard(
 }
 
 @Composable
-private fun StatItem(label: String, value: String) {
+private fun StatItem(
+    label: String, 
+    value: String,
+    valueColor: Color = MaterialTheme.colorScheme.onSurface
+) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = "$label: ",
@@ -188,7 +197,7 @@ private fun StatItem(label: String, value: String) {
             text = value,
             style = MaterialTheme.typography.bodySmall,
             fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface
+            color = valueColor
         )
     }
 }

@@ -1,26 +1,23 @@
+package com.thomas.cargotracker.ui.screens.main
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBox
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import com.thomas.cargotracker.dto.UserRole
 import com.thomas.cargotracker.ui.navigation.MainRoute
-import com.thomas.cargotracker.ui.screens.profile.ProfileContent
 
 sealed class MainNavItem(
     val route: MainRoute,
@@ -30,7 +27,7 @@ sealed class MainNavItem(
     data object Home : MainNavItem(MainRoute.Home, "Home", Icons.Default.Home)
     data object Profile : MainNavItem(MainRoute.Profile, "Profile", Icons.Default.AccountBox)
 
-    data object ProviderCreate : MainNavItem(MainRoute.ProviderCreate, "Create", Icons.Default.Add)
+    data object ProviderCreate : MainNavItem(MainRoute.ProviderCreate, "Provision", Icons.Default.Build)
     data object ProviderHistory : MainNavItem(MainRoute.ProviderHistory, "History", Icons.Default.History)
 
     // Customer Items

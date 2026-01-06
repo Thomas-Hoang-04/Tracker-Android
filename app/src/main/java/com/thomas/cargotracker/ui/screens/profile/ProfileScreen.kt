@@ -28,10 +28,28 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.thomas.cargotracker.dto.UserRole
+import androidx.compose.material.icons.filled.Lock
+import com.thomas.cargotracker.ui.viewmodel.user.UserViewModel
 
 @Composable
-fun ProfileContent(userRole: UserRole, onLogout: () -> Unit) {
+fun ProfileScreen(
+    userRole: UserRole,
+    onLogout: () -> Unit,
+    onEditProfile: () -> Unit,
+    onChangePassword: () -> Unit,
+    viewModel: UserViewModel = hiltViewModel()
+) {
+    val profileState by viewModel.profileState.collectAsState()
+
+    LaunchedEffect(Unit) {
+        viewModel.loadCurrentUser()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -56,23 +74,50 @@ fun ProfileContent(userRole: UserRole, onLogout: () -> Unit) {
             tint = MaterialTheme.colorScheme.primary
         )
         Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = if (userRole == UserRole.PROVIDER) "Provider User" else "Standard User",
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = userRole.name,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
+        
+        if (profileState.isLoading) {
+             Text("Loading...", style = MaterialTheme.typography.titleLarge)
+        } else {
+             Text(
+                text = profileState.user?.fullName ?: "User",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = profileState.user?.email ?: userRole.name,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = "Role: ${userRole.name}",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
 
         Spacer(modifier = Modifier.height(32.dp))
         
         // Settings Options
-        ProfileOptionItem(icon = Icons.Default.Settings, label = "Account Settings")
-        ProfileOptionItem(icon = Icons.Default.Notifications, label = "Notifications")
-        ProfileOptionItem(icon = Icons.AutoMirrored.Filled.Help, label = "Help & Support")
+        ProfileOptionItem(
+            icon = Icons.Default.Settings, 
+            label = "Edit Profile",
+            onClick = onEditProfile
+        )
+        ProfileOptionItem(
+            icon = Icons.Default.Lock, 
+            label = "Change Password",
+            onClick = onChangePassword
+        )
+        ProfileOptionItem(
+            icon = Icons.Default.Notifications, 
+            label = "Notifications",
+            onClick = {}
+        )
+        ProfileOptionItem(
+            icon = Icons.AutoMirrored.Filled.Help, 
+            label = "Help & Support",
+            onClick = {}
+        )
 
         Spacer(modifier = Modifier.weight(1f))
         
@@ -89,7 +134,7 @@ fun ProfileContent(userRole: UserRole, onLogout: () -> Unit) {
 }
 
 @Composable
-fun ProfileOptionItem(icon: ImageVector, label: String) {
+fun ProfileOptionItem(icon: ImageVector, label: String, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -97,7 +142,7 @@ fun ProfileOptionItem(icon: ImageVector, label: String) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
         ),
-        onClick = { /* TODO */ }
+        onClick = onClick
     ) {
         Row(
             modifier = Modifier

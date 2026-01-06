@@ -14,6 +14,7 @@ data class UpdateProfileState(
     val address: String = "",
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
+    val isModified: Boolean = false,
     val error: String? = null
 )
 

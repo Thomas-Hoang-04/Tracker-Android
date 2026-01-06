@@ -26,6 +26,8 @@ class UserViewModel @Inject constructor(
     private val _updateProfileState = MutableStateFlow(UpdateProfileState())
     val updateProfileState: StateFlow<UpdateProfileState> = _updateProfileState.asStateFlow()
 
+    private var initialProfileState: UpdateProfileState? = null
+
     private val _changePasswordState = MutableStateFlow(ChangePasswordState())
     val changePasswordState: StateFlow<ChangePasswordState> = _changePasswordState.asStateFlow()
 
@@ -45,6 +47,7 @@ class UserViewModel @Inject constructor(
                             address = result.data.address ?: ""
                         )
                     }
+                    initialProfileState = _updateProfileState.value
                 }
                 is Result.Error -> {
                     _profileState.update { it.copy(isLoading = false, error = result.message) }
@@ -73,15 +76,32 @@ class UserViewModel @Inject constructor(
 
     // Update Profile
     fun updateFullName(fullName: String) {
-        _updateProfileState.update { it.copy(fullName = fullName, error = null) }
+        _updateProfileState.update { 
+            it.copy(fullName = fullName, error = null).also { newState -> checkModified(newState) }
+        }
     }
 
     fun updatePhoneNumber(phoneNumber: String) {
-        _updateProfileState.update { it.copy(phoneNumber = phoneNumber, error = null) }
+        _updateProfileState.update { 
+            it.copy(phoneNumber = phoneNumber, error = null).also { newState -> checkModified(newState) }
+        }
     }
 
     fun updateAddress(address: String) {
-        _updateProfileState.update { it.copy(address = address, error = null) }
+        _updateProfileState.update { 
+            it.copy(address = address, error = null).also { newState -> checkModified(newState) }
+        }
+    }
+
+    private fun checkModified(newState: UpdateProfileState) {
+        val initial = initialProfileState ?: return
+        val isModified = newState.fullName != initial.fullName ||
+                newState.phoneNumber != initial.phoneNumber ||
+                newState.address != initial.address
+        
+        if (newState.isModified != isModified) {
+            _updateProfileState.update { it.copy(isModified = isModified) }
+        }
     }
 
     fun updateProfile() {
@@ -94,8 +114,10 @@ class UserViewModel @Inject constructor(
                 address = state.address.ifBlank { null }
             )) {
                 is Result.Success -> {
-                    _updateProfileState.update { it.copy(isLoading = false, isSuccess = true) }
+                    _updateProfileState.update { it.copy(isLoading = false, isSuccess = true, isModified = false) }
                     _profileState.update { it.copy(user = result.data) }
+                    // Update initial state to new successful state
+                    initialProfileState = _updateProfileState.value.copy(isSuccess = false, isLoading = false, error = null)
                 }
                 is Result.Error -> {
                     _updateProfileState.update { it.copy(isLoading = false, error = result.message) }
@@ -110,8 +132,10 @@ class UserViewModel @Inject constructor(
         _updateProfileState.value = UpdateProfileState(
             fullName = user?.fullName ?: "",
             phoneNumber = user?.phoneNumber ?: "",
-            address = user?.address ?: ""
+            address = user?.address ?: "",
+            isModified = false
         )
+        initialProfileState = _updateProfileState.value
     }
 
     // Change Password
