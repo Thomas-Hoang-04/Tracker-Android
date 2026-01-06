@@ -27,7 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.thomas.cargotracker.ui.viewmodel.ShipperViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.ShipperViewModel
 import com.thomas.cargotracker.data.model.OrderSummary
 import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
 import androidx.compose.ui.Alignment

@@ -24,7 +24,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.thomas.cargotracker.ui.viewmodel.CustomerViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
 import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp

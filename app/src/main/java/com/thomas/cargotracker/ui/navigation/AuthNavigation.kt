@@ -9,7 +9,7 @@ import com.thomas.cargotracker.ui.screens.auth.ForgotPasswordScreen
 import com.thomas.cargotracker.ui.screens.auth.LoginScreen
 import com.thomas.cargotracker.ui.screens.auth.RegisterScreen
 import com.thomas.cargotracker.ui.screens.auth.SplashScreen
-import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.AuthViewModel
 import kotlinx.serialization.Serializable
 
 @Serializable

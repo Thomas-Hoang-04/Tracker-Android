@@ -83,7 +83,7 @@ import com.thomas.cargotracker.ui.components.SecondaryButton
 import com.thomas.cargotracker.ui.state.BleScannedDevice
 import com.thomas.cargotracker.ui.state.BleSetupState
 import com.thomas.cargotracker.ui.viewmodel.BleViewModel
-import com.thomas.cargotracker.ui.viewmodel.ProviderViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.ProviderViewModel
 
 data class MockCustomer(val name: String, val id: String, val role: String = "Customer")
 

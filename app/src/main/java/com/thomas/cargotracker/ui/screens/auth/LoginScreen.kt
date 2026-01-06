@@ -38,13 +38,12 @@ import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.thomas.cargotracker.ui.components.AuthTextField
 import com.thomas.cargotracker.ui.components.PasswordTextField
 import com.thomas.cargotracker.ui.components.PrimaryButton
 import com.thomas.cargotracker.ui.components.SecondaryButton
-import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.AuthViewModel
 
 @Composable
 fun LoginScreen(

@@ -1,4 +1,4 @@
-package com.thomas.cargotracker.ui.viewmodel
+package com.thomas.cargotracker.ui.viewmodel.user
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

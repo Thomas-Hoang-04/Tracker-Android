@@ -2,8 +2,6 @@ package com.thomas.cargotracker.ui.screens.provider
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,8 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.thomas.cargotracker.ui.viewmodel.ProviderViewModel
-import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
+import com.thomas.cargotracker.ui.viewmodel.user.ProviderViewModel
 import com.thomas.cargotracker.data.model.OrderSummary
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight

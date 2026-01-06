@@ -28,7 +28,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.AuthViewModel
 import kotlinx.coroutines.delay
 
 @Composable
