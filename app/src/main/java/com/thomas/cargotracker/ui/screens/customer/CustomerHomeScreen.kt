@@ -35,17 +35,20 @@ fun CustomerHomeScreen(
 ) {
     val orders by viewModel.orders.collectAsState()
     val shipments by viewModel.shipments.collectAsState()
+
     val authState by authViewModel.authState.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
     
     // Pending/Rejected orders (chưa thành shipment)
     val pendingOrders = orders.filter { 
         it.status == OrderStatus.PENDING || it.status == OrderStatus.REJECTED 
     }
     
-    // Active shipments (từ accepted orders, chưa delivered/cancelled)
-    val activeShipments = shipments.filter { 
-        it.status != ShipmentStatus.DELIVERED && it.status != ShipmentStatus.CANCELLED 
-    }
+    // Active shipments (Accepted orders that are not Delivered/Cancelled)
+    // Sort by "higher steps" first: IN_TRANSIT > ASSIGNED > PENDING
+    val activeShipments = shipments
+        .filter { it.status != ShipmentStatus.DELIVERED && it.status != ShipmentStatus.CANCELLED }
+        .sortedByDescending { it.status.ordinal }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -94,36 +97,48 @@ fun CustomerHomeScreen(
 
             item {
                 Text(
-                    text = "Active Orders",
+                    text = "In-Progress Orders",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                 )
             }
 
-            // Pending/Rejected Orders (chưa được accept)
-            items(pendingOrders) { order ->
-                CustomerOrderCard(
-                    order = order,
-                    onMoreDetailsClick = { onOrderDetails(order.id) }
-                )
-            }
-            
-            // Active Shipments (đã được accept và đang vận chuyển)
-            items(activeShipments) { shipment ->
-                CustomerShipmentCard(
-                    shipment = shipment,
-                    onDetailsClick = { onShipmentDetails(shipment.id) }
-                )
-            }
-
-            if (pendingOrders.isEmpty() && activeShipments.isEmpty()) {
-                item {
-                    Text(
-                        text = "No active orders.",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+            if (isLoading) {
+                // Show Skeleton Loading
+                items(3) {
+                    SkeletonOrderCard()
+                }
+            } else {
+                // Pending/Rejected Orders
+                items(pendingOrders) { order ->
+                    CustomerOrderCard(
+                        order = order,
+                        onMoreDetailsClick = { onOrderDetails(order.id) }
                     )
+                }
+                
+                // Active Shipments (Orders in progress)
+                items(activeShipments) { shipment ->
+                    // Find the order for this shipment to display consistent Order info
+                    val relatedOrder = orders.find { it.shipmentId == shipment.id }
+                    if (relatedOrder != null) {
+                        CustomerOrderCard(
+                            order = relatedOrder,
+                            shipmentStatus = shipment.status,
+                            onMoreDetailsClick = { onOrderDetails(relatedOrder.id) }
+                        )
+                    }
+                }
+
+                if (pendingOrders.isEmpty() && activeShipments.isEmpty()) {
+                    item {
+                        Text(
+                            text = "No active orders.",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
         }
