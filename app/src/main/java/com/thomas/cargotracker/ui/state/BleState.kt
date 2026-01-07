@@ -35,6 +35,7 @@ data class BleScanState(
 data class BleProvisioningState(
     val setupState: BleSetupState = BleSetupState.DISCONNECTED,
     val connectedDevice: BleScannedDevice? = null,
+    val deviceId: String? = null,
     val deviceMessage: String? = null,
     val error: String? = null,
     val isLoading: Boolean = false

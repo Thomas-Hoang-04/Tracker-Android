@@ -31,12 +31,9 @@ sealed class MainNavItem(
     data object ProviderHistory : MainNavItem(MainRoute.ProviderHistory, "History", Icons.Default.History)
 
     // Customer Items
-    data object CustomerHome : MainNavItem(MainRoute.CustomerHome, "Home", Icons.Default.Home)
     data object CustomerHistory : MainNavItem(MainRoute.CustomerHistory, "History", Icons.Default.History)
-    data object CustomerSearch : MainNavItem(MainRoute.CustomerSearch, "Search", Icons.Default.Search)
 
     // Shipper Items
-    data object ShipperHome : MainNavItem(MainRoute.ShipperHome, "Home", Icons.Default.Home)
     data object ShipperFindOrder : MainNavItem(MainRoute.ShipperFindOrder, "Find Order", Icons.Default.Search)
     data object ShipperHistory : MainNavItem(MainRoute.ShipperHistory, "History", Icons.Default.History)
 
@@ -44,8 +41,8 @@ sealed class MainNavItem(
         fun getNavItemsForRole(role: UserRole): List<MainNavItem> {
             return when (role) {
                 UserRole.PROVIDER -> listOf(Home, ProviderPending, ProviderHistory, Profile)
-                UserRole.CUSTOMER -> listOf(CustomerHome, CustomerHistory, CustomerSearch, Profile)
-                UserRole.SHIPPER -> listOf(ShipperHome, ShipperFindOrder, ShipperHistory, Profile)
+                UserRole.CUSTOMER -> listOf(Home, CustomerHistory, Profile)
+                UserRole.SHIPPER -> listOf(Home, ShipperFindOrder, ShipperHistory, Profile)
                 else -> listOf(Home, Profile)
             }
         }
@@ -68,10 +65,13 @@ fun MainScreen(
             navItems.forEach { item ->
                 item(
                     selected = currentRoute == item.route,
-                    onClick = {
+                        onClick = {
                         if (currentRoute != item.route) {
-                            backStack.clear()
+                            // Safe swap: Add new route first, then remove others to prevent empty backstack crash
                             backStack.add(item.route)
+                            while (backStack.size > 1) {
+                                backStack.removeAt(0)
+                            }
                         }
                     },
                     icon = {
