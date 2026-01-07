@@ -11,21 +11,22 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import com.thomas.cargotracker.repository.UserRepository
+import com.thomas.cargotracker.dto.UserRole
+import com.thomas.cargotracker.network.Result
 
 @HiltViewModel
 class ProviderViewModel @Inject constructor(
     private val shipmentRepository: ShipmentRepository,
-    private val orderRepository: OrderRepository
+    private val orderRepository: OrderRepository,
+    private val userRepository: UserRepository
 ) : ViewModel() {
-
-    // Shipments for Provider (existing)
-    val shipments: StateFlow<List<Shipment>> = shipmentRepository.shipments
-
-    // Pending Orders for Provider approval
-    val pendingOrders: StateFlow<List<OrderResponse>> = orderRepository.pendingOrders
 
     // Filtering State
     data class FilterState(
@@ -35,15 +36,66 @@ class ProviderViewModel @Inject constructor(
     private val _filterState = MutableStateFlow(FilterState())
     val filterState: StateFlow<FilterState> = _filterState.asStateFlow()
 
+    // Shipments for Provider (existing) - Client-side filtered
+    val shipments: StateFlow<List<Shipment>> = combine(
+        shipmentRepository.shipments,
+        _filterState
+    ) { shipments, filter ->
+        if (filter.search.isBlank()) {
+            shipments
+        } else {
+            val query = filter.search.lowercase()
+            shipments.filter {
+                it.description.lowercase().contains(query) ||
+                it.origin.lowercase().contains(query) ||
+                it.destination.lowercase().contains(query) ||
+                it.trackingId.lowercase().contains(query)
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
+
+    // Shippers List
+    data class UserResult(val name: String, val id: String)
+    private val _shippers = MutableStateFlow<List<UserResult>>(emptyList())
+    val shippers: StateFlow<List<UserResult>> = _shippers.asStateFlow()
+
+    // Pending Orders for Provider approval
+    val pendingOrders: StateFlow<List<OrderResponse>> = orderRepository.pendingOrders
+
     init {
         loadShipments()
+        fetchShippers()
+    }
+
+    private fun fetchShippers() {
+        viewModelScope.launch {
+            try {
+                // Assuming UserRole.SHIPPER is accessible here, might need import or mapping
+                // Using UserRepository directly
+                when (val result = userRepository.getUsersByRole(UserRole.SHIPPER)) {
+                   is Result.Success -> {
+                       _shippers.value = result.data
+                           .filter { it.isActive }
+                           .map { UserResult(it.fullName, it.id) }
+                   }
+                   else -> _shippers.value = emptyList()
+                }
+            } catch (e: Exception) {
+               _shippers.value = emptyList()
+            }
+        }
     }
 
     fun loadShipments() {
         viewModelScope.launch {
+            // Pass null for search to avoid backend lower(bytea) error
             shipmentRepository.filterShipments(
                 status = _filterState.value.status,
-                search = _filterState.value.search.ifBlank { null }
+                search = null 
             )
         }
     }
@@ -188,16 +240,18 @@ class ProviderViewModel @Inject constructor(
         viewModelScope.launch {
             _createOrderState.value = CreateOrderState.Loading
             try {
-                val shipment = if (deviceId.isNotBlank()) {
-                    shipmentRepository.assignDevice(shipmentId, deviceId)
+                // 1. Assign Shipper First (Transitions status from PENDING -> ASSIGNED)
+                val shippedShipment = if (shipperId != null) {
+                    shipmentRepository.assignShipper(shipmentId, shipperId)
                 } else {
                     shipmentRepository.getShipment(shipmentId)
                 }
 
-                val finalShipment = if (shipperId != null && shipment != null) {
-                    shipmentRepository.assignShipper(shipmentId, shipperId)
+                // 2. Assign Device Second (Requires status ASSIGNED)
+                val finalShipment = if (deviceId.isNotBlank() && shippedShipment != null) {
+                    shipmentRepository.assignDevice(shipmentId, deviceId)
                 } else {
-                    shipment
+                    shippedShipment
                 }
 
                 if (finalShipment != null) {

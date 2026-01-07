@@ -89,7 +89,7 @@ fun ProviderActionCard(
 @Composable
 fun ProviderShipmentCard(
     shipment: Shipment,
-    onMoreDetailsClick: () -> Unit,
+    onMoreDetailsClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     border: BorderStroke = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
 ) {
@@ -183,18 +183,20 @@ fun ProviderShipmentCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             // Footer action
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.End
-            ) {
-                TextButton(
-                    onClick = onMoreDetailsClick,
-                    contentPadding = PaddingValues(0.dp)
+            if (onMoreDetailsClick != null) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End
                 ) {
-                    Text(
-                        text = "More details",
-                        style = MaterialTheme.typography.labelMedium
-                    )
+                    TextButton(
+                        onClick = onMoreDetailsClick,
+                        contentPadding = PaddingValues(0.dp)
+                    ) {
+                        Text(
+                            text = "More details",
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
                 }
             }
         }

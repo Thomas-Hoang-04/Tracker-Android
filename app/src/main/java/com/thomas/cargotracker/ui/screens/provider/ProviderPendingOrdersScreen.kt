@@ -65,6 +65,7 @@ import com.thomas.cargotracker.ui.viewmodel.user.ProviderViewModel
 @Composable
 fun ProviderPendingOrdersScreen(
     onBack: () -> Unit,
+    onAcceptOrder: (String) -> Unit, // New callback
     onOrderProcessed: () -> Unit,
     viewModel: ProviderViewModel = hiltViewModel()
 ) {
@@ -220,7 +221,7 @@ fun ProviderPendingOrdersScreen(
                     items(pendingOrders) { order ->
                         PendingOrderCard(
                             order = order,
-                            onAccept = { viewModel.acceptOrder(order.id) },
+                            onAccept = { onAcceptOrder(order.id) },
                             onReject = {
                                 selectedOrderForReject = order
                                 showRejectDialog = true

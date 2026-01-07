@@ -153,33 +153,40 @@ fun ProviderProvisionShipmentScreen(
     var showDeviceReadyDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
 
+    var isProvisioningNewOrder by remember { mutableStateOf(false) }
+
     // Accept order when screen opens with orderId
-    LaunchedEffect(orderId) {
-        if (orderId != null && acceptedOrderId == null) {
-            viewModel.acceptOrder(orderId)
-            acceptedOrderId = orderId
-        }
-    }
+    // REMOVED: Auto-accept logic. We now wait until the end.
     
     // Handle accept result - find the created shipment
     LaunchedEffect(orderApprovalState) {
-        if (orderApprovalState is ProviderViewModel.OrderApprovalState.Accepted && acceptedOrderId != null) {
-            viewModel.loadShipments()
+        if (orderApprovalState is ProviderViewModel.OrderApprovalState.Accepted) {
+            val state = orderApprovalState as ProviderViewModel.OrderApprovalState.Accepted
+            if (isProvisioningNewOrder) {
+                // Step 2: Order Accepted, now Provision
+                val shipmentId = state.order.shipmentId
+                if (shipmentId != null) {
+                    viewModel.provisionOrder(
+                        shipmentId = shipmentId,
+                        deviceId = bleUiState.provisionedDeviceId ?: connectionState.deviceId ?: "",
+                        shipperId = selectedShipper?.id
+                    )
+                } else {
+                    // Fallback: Reload shipments and try to find it? 
+                    // Or show error. Ideally shipmentId should be present.
+                    snackbarHostState.showSnackbar("Error: Shipment ID missing from accepted order")
+                    isProvisioningNewOrder = false
+                }
+            } else if (acceptedOrderId != null) {
+                 // For legacy or other flows if needed
+                 viewModel.loadShipments()
+            }
+        } else if (orderApprovalState is ProviderViewModel.OrderApprovalState.Error) {
+             isProvisioningNewOrder = false
         }
     }
     
-    // Auto-select the shipment created from accepted order
-    LaunchedEffect(shipments, acceptedOrderId) {
-        if (acceptedOrderId != null && selectedOrder == null) {
-            // Find shipment that was just created (latest one)
-            val newShipment = shipments.firstOrNull { 
-                it.status.name == "PENDING" || it.status.name == "ASSIGNED"
-            }
-            if (newShipment != null) {
-                selectedOrder = newShipment
-            }
-        }
-    }
+
 
     LaunchedEffect(Unit) {
         bleViewModel.resetState()
@@ -253,12 +260,23 @@ fun ProviderProvisionShipmentScreen(
     val createOrderState by viewModel.createOrderState.collectAsState()
 
     val handleProvisionOrder = {
+        // Get deviceId from BLE state OR from the connected device info
+        // The deviceId is stored in TestDeviceData when using mock, or from actual device when using real BLE
+        val deviceIdToUse = bleUiState.provisionedDeviceId 
+            ?: connectionState.deviceId  // Try connection state
+            ?: ""
+        
         if (selectedOrder != null) {
+            // Existing shipment flow
             viewModel.provisionOrder(
                 shipmentId = selectedOrder!!.id,
-                deviceId = bleUiState.provisionedDeviceId ?: "",
+                deviceId = deviceIdToUse,
                 shipperId = selectedShipper?.id
             )
+        } else if (orderId != null) {
+            // New Order flow: Step 1 - Accept Order
+            isProvisioningNewOrder = true
+            viewModel.acceptOrder(orderId)
         }
     }
 
@@ -268,10 +286,12 @@ fun ProviderProvisionShipmentScreen(
                 bleViewModel.disconnect()
                 viewModel.resetCreateOrderState()
                 onShipmentProvisioned()
+                isProvisioningNewOrder = false
             }
             is ProviderViewModel.CreateOrderState.Error -> {
                 snackbarHostState.showSnackbar(state.message)
                 viewModel.resetCreateOrderState()
+                isProvisioningNewOrder = false
             }
             else -> {}
         }
