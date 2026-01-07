@@ -27,7 +27,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
+import com.thomas.cargotracker.ui.screens.provider.ProviderShipmentCard
 import com.thomas.cargotracker.domain.model.Shipment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -122,8 +122,8 @@ fun ShipperOrderDetailsScreen(
             Text("Live Status", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
 
             // Detailed Stats
-            ProviderOrderCard(
-                order = order,
+            ProviderShipmentCard(
+                shipment = order,
                 onMoreDetailsClick = { /* No-op */ }
             )
         }

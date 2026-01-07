@@ -8,20 +8,20 @@ import androidx.navigation3.ui.NavDisplay
 import com.thomas.cargotracker.dto.UserRole
 import com.thomas.cargotracker.ui.screens.admin.AdminCreateUserScreen
 import com.thomas.cargotracker.ui.screens.admin.AdminHomeScreen
-import com.thomas.cargotracker.ui.screens.admin.AdminShipmentListScreen
 import com.thomas.cargotracker.ui.screens.admin.AdminUserListScreen
 import com.thomas.cargotracker.ui.screens.customer.CustomerHistoryScreen
 import com.thomas.cargotracker.ui.screens.customer.CustomerHomeScreen
 import com.thomas.cargotracker.ui.screens.customer.CustomerOrderDetailsScreen
-import com.thomas.cargotracker.ui.screens.customer.CustomerSearchUserScreen
+import com.thomas.cargotracker.ui.screens.customer.CustomerSearchProvidersScreen
 import com.thomas.cargotracker.ui.screens.main.MainScreen
 import com.thomas.cargotracker.ui.screens.profile.ChangePasswordScreen
 import com.thomas.cargotracker.ui.screens.profile.EditProfileScreen
 import com.thomas.cargotracker.ui.screens.profile.ProfileScreen
-import com.thomas.cargotracker.ui.screens.provider.ProviderCreateOrderScreen
 import com.thomas.cargotracker.ui.screens.provider.ProviderHistoryScreen
 import com.thomas.cargotracker.ui.screens.provider.ProviderHomeScreen
-import com.thomas.cargotracker.ui.screens.provider.ProviderOrderDetailsScreen
+import com.thomas.cargotracker.ui.screens.provider.ProviderPendingOrdersScreen
+import com.thomas.cargotracker.ui.screens.provider.ProviderProvisionShipmentScreen
+import com.thomas.cargotracker.ui.screens.provider.ProviderShipmentDetailsScreen
 import com.thomas.cargotracker.ui.screens.shipper.ShipperFindOrderScreen
 import com.thomas.cargotracker.ui.screens.shipper.ShipperHistoryScreen
 import com.thomas.cargotracker.ui.screens.shipper.ShipperHomeScreen
@@ -40,12 +40,15 @@ sealed class MainRoute : NavKey {
     @Serializable
     data object ChangePassword : MainRoute()
 
+    // Provider
     @Serializable
-    data object ProviderCreate : MainRoute()
+    data object ProviderPendingOrders : MainRoute()
+    @Serializable
+    data class ProviderAcceptOrder(val orderId: String) : MainRoute()
     @Serializable
     data object ProviderHistory : MainRoute()
     @Serializable
-    data class ProviderOrderDetails(val orderId: String) : MainRoute()
+    data class ProviderShipmentDetails(val shipmentId: String) : MainRoute()
 
     // Customer
     @Serializable
@@ -58,6 +61,8 @@ sealed class MainRoute : NavKey {
     data object CustomerSearch : MainRoute()
     @Serializable
     data class CustomerOrderDetails(val orderId: String) : MainRoute()
+    @Serializable
+    data class CustomerShipmentDetails(val shipmentId: String) : MainRoute()
 
     // Shipper
     @Serializable
@@ -74,8 +79,6 @@ sealed class MainRoute : NavKey {
     data object AdminUserList : MainRoute()
     @Serializable
     data object AdminCreateUser : MainRoute()
-    @Serializable
-    data object AdminShipmentList : MainRoute()
 }
 
 @Composable
@@ -101,14 +104,13 @@ fun MainNavigation(
                 entry<MainRoute.Home> {
                     when (userRole) {
                         UserRole.PROVIDER -> ProviderHomeScreen(
-                            onSeeOrderState = { /* TODO */ },
-                            onCreateOrder = { backStack.add(MainRoute.ProviderCreate) },
-                            onOrderHistory = { backStack.add(MainRoute.ProviderHistory) },
-                            onOrderDetails = { orderId -> backStack.add(MainRoute.ProviderOrderDetails(orderId)) },
+                            onShipmentDetails = { shipmentId -> backStack.add(MainRoute.ProviderShipmentDetails(shipmentId)) },
+                            onAcceptOrder = { orderId -> backStack.add(MainRoute.ProviderAcceptOrder(orderId)) },
                             authViewModel = authViewModel
                         )
                         UserRole.CUSTOMER -> CustomerHomeScreen(
                             onOrderDetails = { orderId -> backStack.add(MainRoute.CustomerOrderDetails(orderId)) },
+                            onShipmentDetails = { shipmentId -> backStack.add(MainRoute.CustomerShipmentDetails(shipmentId)) },
                             onCreateOrder = { backStack.add(MainRoute.CustomerCreateOrder) },
                             authViewModel = authViewModel
                         )
@@ -118,7 +120,6 @@ fun MainNavigation(
                         )
                         UserRole.ADMIN -> AdminHomeScreen(
                             onManageUsers = { backStack.add(MainRoute.AdminUserList) },
-                            onViewShipments = { backStack.add(MainRoute.AdminShipmentList) },
                             onProfile = { backStack.add(MainRoute.Profile) },
                             authViewModel = authViewModel
                         )
@@ -127,13 +128,13 @@ fun MainNavigation(
 
                 entry<MainRoute.Profile> {
                     ProfileScreen(
-                        userRole = userRole, 
+                        userRole = userRole,
                         onLogout = onLogout,
                         onEditProfile = { backStack.add(MainRoute.EditProfile) },
                         onChangePassword = { backStack.add(MainRoute.ChangePassword) }
                     )
                 }
-                
+
                 entry<MainRoute.EditProfile> {
                     EditProfileScreen(onBack = { backStack.removeLastOrNull() })
                 }
@@ -142,9 +143,20 @@ fun MainNavigation(
                     ChangePasswordScreen(onBack = { backStack.removeLastOrNull() })
                 }
 
-                entry<MainRoute.ProviderCreate> {
-                    ProviderCreateOrderScreen(
-                        onOrderCreated = {
+                // Provider Entries
+                entry<MainRoute.ProviderPendingOrders> {
+                    ProviderPendingOrdersScreen(
+                        onBack = { backStack.removeLastOrNull() },
+                        onOrderProcessed = {
+                            backStack.removeLastOrNull()
+                        }
+                    )
+                }
+
+                entry<MainRoute.ProviderAcceptOrder> { route ->
+                    ProviderProvisionShipmentScreen(
+                        orderId = route.orderId,
+                        onShipmentProvisioned = {
                             backStack.clear()
                             backStack.add(MainRoute.Home)
                         }
@@ -153,13 +165,13 @@ fun MainNavigation(
 
                 entry<MainRoute.ProviderHistory> {
                     ProviderHistoryScreen(
-                        onOrderDetails = { orderId -> backStack.add(MainRoute.ProviderOrderDetails(orderId)) }
+                        onShipmentDetails = { shipmentId -> backStack.add(MainRoute.ProviderShipmentDetails(shipmentId)) }
                     )
                 }
 
-                entry<MainRoute.ProviderOrderDetails> { route ->
-                    ProviderOrderDetailsScreen(
-                        orderId = route.orderId,
+                entry<MainRoute.ProviderShipmentDetails> { route ->
+                    ProviderShipmentDetailsScreen(
+                        shipmentId = route.shipmentId,
                         onBack = { backStack.removeLastOrNull() }
                     )
                 }
@@ -168,6 +180,7 @@ fun MainNavigation(
                 entry<MainRoute.CustomerHome> {
                     CustomerHomeScreen(
                         onOrderDetails = { orderId -> backStack.add(MainRoute.CustomerOrderDetails(orderId)) },
+                        onShipmentDetails = { shipmentId -> backStack.add(MainRoute.CustomerShipmentDetails(shipmentId)) },
                         onCreateOrder = { backStack.add(MainRoute.CustomerCreateOrder) },
                         authViewModel = authViewModel
                     )
@@ -189,12 +202,19 @@ fun MainNavigation(
                 }
 
                 entry<MainRoute.CustomerSearch> {
-                    CustomerSearchUserScreen()
+                    CustomerSearchProvidersScreen()
                 }
 
                 entry<MainRoute.CustomerOrderDetails> { route ->
                     CustomerOrderDetailsScreen(
                         orderId = route.orderId,
+                        onBack = { backStack.removeLastOrNull() }
+                    )
+                }
+
+                entry<MainRoute.CustomerShipmentDetails> { route ->
+                    ProviderShipmentDetailsScreen(
+                        shipmentId = route.shipmentId,
                         onBack = { backStack.removeLastOrNull() }
                     )
                 }
@@ -237,13 +257,6 @@ fun MainNavigation(
                 entry<MainRoute.AdminCreateUser> {
                     AdminCreateUserScreen(
                         onBack = { backStack.removeLastOrNull() }
-                    )
-                }
-
-                entry<MainRoute.AdminShipmentList> {
-                    AdminShipmentListScreen(
-                        onBack = { backStack.removeLastOrNull() },
-                        onOrderDetails = { orderId -> backStack.add(MainRoute.ProviderOrderDetails(orderId)) }
                     )
                 }
             }

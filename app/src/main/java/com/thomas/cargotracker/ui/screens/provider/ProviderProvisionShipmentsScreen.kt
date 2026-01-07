@@ -87,8 +87,8 @@ import com.thomas.cargotracker.ui.viewmodel.user.ProviderViewModel
 
 data class MockShipper(val name: String, val id: String, val role: String = "Shipper")
 
-enum class CreateOrderStep {
-    SELECT_ORDER,
+enum class ProvisionShipmentStep {
+    SELECT_SHIPMENT,
     FIND_SHIPPER,
     CONNECT_DEVICE,
     SETUP_THRESHOLD
@@ -96,24 +96,35 @@ enum class CreateOrderStep {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProviderCreateOrderScreen(
-    onOrderCreated: () -> Unit,
+fun ProviderProvisionShipmentScreen(
+    orderId: String? = null,
+    onShipmentProvisioned: () -> Unit,
     viewModel: ProviderViewModel = hiltViewModel(),
     bleViewModel: BleViewModel = hiltViewModel(),
     authViewModel: AuthViewModel = hiltViewModel()
 ) {
     val authState by authViewModel.authState.collectAsState()
-    var currentStep by remember { mutableStateOf(CreateOrderStep.SELECT_ORDER) }
-    
+    // If orderId is provided, start from FIND_SHIPPER (skip select shipment)
+    var currentStep by remember { 
+        mutableStateOf(
+            if (orderId != null) ProvisionShipmentStep.FIND_SHIPPER 
+            else ProvisionShipmentStep.SELECT_SHIPMENT
+        ) 
+    }
+
     var orderSearch by remember { mutableStateOf("") }
     var selectedOrder by remember { mutableStateOf<Shipment?>(null) }
     
+    // Track if we've accepted the order
+    var acceptedOrderId by remember { mutableStateOf<String?>(null) }
+    val orderApprovalState by viewModel.orderApprovalState.collectAsState()
+
     var shipperSearch by remember { mutableStateOf("") }
     var selectedShipper by remember { mutableStateOf<MockShipper?>(null) }
 
     var selectedDevice by remember { mutableStateOf<BleScannedDevice?>(null) }
     var tokenInput by remember { mutableStateOf("") }
-    
+
     var tempMin by remember { mutableStateOf("20.0") }
     var tempMax by remember { mutableStateOf("30.0") }
     var humidityMin by remember { mutableStateOf("30.0") }
@@ -123,11 +134,11 @@ fun ProviderCreateOrderScreen(
     var gyroThreshold by remember { mutableStateOf("1.0") }
     var readPeriodMs by remember { mutableStateOf("30000") }
 
-    val orders by viewModel.orders.collectAsState()
-    val unprovisionedOrders = remember(orders) {
-        orders.filter { it.status.name == "PENDING" || (it.status.name == "ASSIGNED" && it.deviceId == null) }
+    val shipments by viewModel.shipments.collectAsState()
+    val unprovisionedOrders = remember(shipments) {
+        shipments.filter { it.status.name == "PENDING" || (it.status.name == "ASSIGNED" && it.deviceId == null) }
     }
-    val filteredOrders = if (orderSearch.isEmpty()) unprovisionedOrders else unprovisionedOrders.filter { 
+    val filteredOrders = if (orderSearch.isEmpty()) unprovisionedOrders else unprovisionedOrders.filter {
         it.id.contains(orderSearch, ignoreCase = true) || it.description.contains(orderSearch, ignoreCase = true)
     }
 
@@ -141,17 +152,45 @@ fun ProviderCreateOrderScreen(
     var hasTriggeredScan by remember { mutableStateOf(false) }
     var showDeviceReadyDialog by remember { mutableStateOf(false) }
     var showSuccessDialog by remember { mutableStateOf(false) }
+
+    // Accept order when screen opens with orderId
+    LaunchedEffect(orderId) {
+        if (orderId != null && acceptedOrderId == null) {
+            viewModel.acceptOrder(orderId)
+            acceptedOrderId = orderId
+        }
+    }
     
+    // Handle accept result - find the created shipment
+    LaunchedEffect(orderApprovalState) {
+        if (orderApprovalState is ProviderViewModel.OrderApprovalState.Accepted && acceptedOrderId != null) {
+            viewModel.loadShipments()
+        }
+    }
+    
+    // Auto-select the shipment created from accepted order
+    LaunchedEffect(shipments, acceptedOrderId) {
+        if (acceptedOrderId != null && selectedOrder == null) {
+            // Find shipment that was just created (latest one)
+            val newShipment = shipments.firstOrNull { 
+                it.status.name == "PENDING" || it.status.name == "ASSIGNED"
+            }
+            if (newShipment != null) {
+                selectedOrder = newShipment
+            }
+        }
+    }
+
     LaunchedEffect(Unit) {
         bleViewModel.resetState()
-        viewModel.loadOrders()
+        viewModel.loadShipments()
     }
 
     val enableBluetoothLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         bluetoothEnabled = result.resultCode == Activity.RESULT_OK
-        if (bluetoothEnabled && permissionsGranted && currentStep == CreateOrderStep.CONNECT_DEVICE) {
+        if (bluetoothEnabled && permissionsGranted && currentStep == ProvisionShipmentStep.CONNECT_DEVICE) {
             bleViewModel.startScan()
         }
     }
@@ -162,7 +201,7 @@ fun ProviderCreateOrderScreen(
             permissionsGranted = permissions.values.all { it }
             if (permissionsGranted) {
                 bluetoothEnabled = bleViewModel.isBluetoothEnabled()
-                if (bluetoothEnabled && currentStep == CreateOrderStep.CONNECT_DEVICE) {
+                if (bluetoothEnabled && currentStep == ProvisionShipmentStep.CONNECT_DEVICE) {
                     bleViewModel.startScan()
                 } else if (!bluetoothEnabled) {
                     val enableIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
@@ -179,7 +218,7 @@ fun ProviderCreateOrderScreen(
     }
 
     LaunchedEffect(currentStep) {
-        if (currentStep == CreateOrderStep.CONNECT_DEVICE && !hasTriggeredScan) {
+        if (currentStep == ProvisionShipmentStep.CONNECT_DEVICE && !hasTriggeredScan) {
             hasTriggeredScan = true
             bluetoothEnabled = bleViewModel.isBluetoothEnabled()
             permissionLauncher.launch(requiredPermissions)
@@ -203,10 +242,10 @@ fun ProviderCreateOrderScreen(
     }
 
     LaunchedEffect(connectionState.setupState) {
-        if (connectionState.setupState == BleSetupState.THRESHOLD_REQUESTED && currentStep == CreateOrderStep.CONNECT_DEVICE) {
-            currentStep = CreateOrderStep.SETUP_THRESHOLD
+        if (connectionState.setupState == BleSetupState.THRESHOLD_REQUESTED && currentStep == ProvisionShipmentStep.CONNECT_DEVICE) {
+            currentStep = ProvisionShipmentStep.SETUP_THRESHOLD
         }
-        if (connectionState.setupState == BleSetupState.DEVICE_READY && currentStep == CreateOrderStep.CONNECT_DEVICE) {
+        if (connectionState.setupState == BleSetupState.DEVICE_READY && currentStep == ProvisionShipmentStep.CONNECT_DEVICE) {
             showDeviceReadyDialog = true
         }
     }
@@ -228,7 +267,7 @@ fun ProviderCreateOrderScreen(
             is ProviderViewModel.CreateOrderState.Success -> {
                 bleViewModel.disconnect()
                 viewModel.resetCreateOrderState()
-                onOrderCreated()
+                onShipmentProvisioned()
             }
             is ProviderViewModel.CreateOrderState.Error -> {
                 snackbarHostState.showSnackbar(state.message)
@@ -239,7 +278,7 @@ fun ProviderCreateOrderScreen(
     }
 
     LaunchedEffect(bleUiState.setupComplete) {
-        if (bleUiState.setupComplete && currentStep == CreateOrderStep.SETUP_THRESHOLD) {
+        if (bleUiState.setupComplete && currentStep == ProvisionShipmentStep.SETUP_THRESHOLD) {
             showSuccessDialog = true
         }
     }
@@ -247,13 +286,13 @@ fun ProviderCreateOrderScreen(
     if (showSuccessDialog) {
         AlertDialog(
             onDismissRequest = { },
-            icon = { 
+            icon = {
                 Icon(
-                    Icons.Default.CheckCircle, 
+                    Icons.Default.CheckCircle,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary 
-                ) 
+                    tint = MaterialTheme.colorScheme.primary
+                )
             },
             title = { Text("Success") },
             text = { Text("Device provisioned successfully!", textAlign = TextAlign.Center) },
@@ -273,13 +312,13 @@ fun ProviderCreateOrderScreen(
     if (showDeviceReadyDialog) {
         AlertDialog(
             onDismissRequest = { },
-            icon = { 
+            icon = {
                 Icon(
-                    Icons.Default.Info, 
+                    Icons.Default.Info,
                     contentDescription = null,
                     modifier = Modifier.size(48.dp),
-                    tint = MaterialTheme.colorScheme.primary 
-                ) 
+                    tint = MaterialTheme.colorScheme.primary
+                )
             },
             title = { Text("Device Ready") },
             text = {
@@ -292,7 +331,7 @@ fun ProviderCreateOrderScreen(
                 Button(
                     onClick = {
                         showDeviceReadyDialog = false
-                        currentStep = CreateOrderStep.SETUP_THRESHOLD
+                        currentStep = ProvisionShipmentStep.SETUP_THRESHOLD
                     }
                 ) {
                     Text("Configure Thresholds")
@@ -310,7 +349,7 @@ fun ProviderCreateOrderScreen(
             }
         )
     }
-    
+
     Scaffold(
         modifier = Modifier.statusBarsPadding(),
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -326,7 +365,7 @@ fun ProviderCreateOrderScreen(
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.Bold
                     )
-                    if (currentStep == CreateOrderStep.CONNECT_DEVICE && !scanState.isScanning && connectionState.setupState == BleSetupState.DISCONNECTED) {
+                    if (currentStep == ProvisionShipmentStep.CONNECT_DEVICE && !scanState.isScanning && connectionState.setupState == BleSetupState.DISCONNECTED) {
                         IconButton(onClick = {
                             bluetoothEnabled = bleViewModel.isBluetoothEnabled()
                             if (bluetoothEnabled) {
@@ -353,7 +392,7 @@ fun ProviderCreateOrderScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             when (currentStep) {
-                CreateOrderStep.SELECT_ORDER -> {
+                ProvisionShipmentStep.SELECT_SHIPMENT -> {
                     Text("Select an order to provision with a device.")
                     OutlinedTextField(
                         value = orderSearch,
@@ -363,7 +402,7 @@ fun ProviderCreateOrderScreen(
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         singleLine = true
                     )
-                    
+
                     LazyColumn(
                         modifier = Modifier.weight(1f).fillMaxWidth(),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -372,9 +411,9 @@ fun ProviderCreateOrderScreen(
                             Card(
                                 onClick = { selectedOrder = order },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedOrder?.id == order.id) 
-                                        MaterialTheme.colorScheme.primaryContainer 
-                                    else 
+                                    containerColor = if (selectedOrder?.id == order.id)
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    else
                                         MaterialTheme.colorScheme.surfaceVariant
                                 ),
                                 modifier = Modifier.fillMaxWidth()
@@ -387,7 +426,7 @@ fun ProviderCreateOrderScreen(
                                 }
                             }
                         }
-                        
+
                         if (unprovisionedOrders.isEmpty()) {
                             item {
                                 Text(
@@ -403,13 +442,13 @@ fun ProviderCreateOrderScreen(
 
                     PrimaryButton(
                         text = "Next",
-                        onClick = { currentStep = CreateOrderStep.FIND_SHIPPER },
+                        onClick = { currentStep = ProvisionShipmentStep.FIND_SHIPPER },
                         enabled = selectedOrder != null,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
 
-                CreateOrderStep.FIND_SHIPPER -> {
+                ProvisionShipmentStep.FIND_SHIPPER -> {
                     Text("Search for a shipper to transport this order (Optional).")
                     OutlinedTextField(
                         value = shipperSearch,
@@ -419,7 +458,7 @@ fun ProviderCreateOrderScreen(
                         leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
                         singleLine = true
                     )
-                    
+
                     val mockShippers = remember {
                         listOf(
                             MockShipper("Shipper", "71ad6c6a-c19d-493a-9f4d-21b2edcab276")
@@ -435,12 +474,12 @@ fun ProviderCreateOrderScreen(
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         items(filteredShippers) { shipper ->
-                             Card(
+                            Card(
                                 onClick = { selectedShipper = shipper },
                                 colors = CardDefaults.cardColors(
-                                    containerColor = if (selectedShipper?.id == shipper.id) 
-                                        MaterialTheme.colorScheme.primaryContainer 
-                                    else 
+                                    containerColor = if (selectedShipper?.id == shipper.id)
+                                        MaterialTheme.colorScheme.primaryContainer
+                                    else
                                         MaterialTheme.colorScheme.surfaceVariant
                                 ),
                                 modifier = Modifier.fillMaxWidth()
@@ -452,23 +491,23 @@ fun ProviderCreateOrderScreen(
                             }
                         }
                     }
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        TextButton(onClick = { currentStep = CreateOrderStep.SELECT_ORDER }) { Text("Back") }
-                        
+                        TextButton(onClick = { currentStep = ProvisionShipmentStep.SELECT_SHIPMENT }) { Text("Back") }
+
                         PrimaryButton(
                             text = if (selectedShipper != null) "Next" else "Skip",
-                            onClick = { currentStep = CreateOrderStep.CONNECT_DEVICE },
+                            onClick = { currentStep = ProvisionShipmentStep.CONNECT_DEVICE },
                             modifier = Modifier.width(120.dp)
                         )
                     }
                 }
-                
-                CreateOrderStep.CONNECT_DEVICE -> {
+
+                ProvisionShipmentStep.CONNECT_DEVICE -> {
                     val isDeviceConnecting = connectionState.setupState == BleSetupState.CONNECTING
                     val isDeviceConnected = connectionState.setupState in listOf(
                         BleSetupState.CONNECTED,
@@ -681,19 +720,19 @@ fun ProviderCreateOrderScreen(
                             bleViewModel.disconnect()
                             selectedDevice = null
                             hasTriggeredScan = false
-                            currentStep = CreateOrderStep.FIND_SHIPPER
+                            currentStep = ProvisionShipmentStep.FIND_SHIPPER
                         }) { Text("Back") }
                     }
                 }
-                
-                CreateOrderStep.SETUP_THRESHOLD -> {
+
+                ProvisionShipmentStep.SETUP_THRESHOLD -> {
                     Text(
                         text = "Smart Sensor Configuration",
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.padding(bottom = 8.dp)
                     )
-                    
+
                     Column(
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier
@@ -729,7 +768,7 @@ fun ProviderCreateOrderScreen(
                         }
 
                         ThresholdCard(title = "Motion & Gas", icon = Icons.Outlined.Speed) {
-                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 OutlinedTextField(
                                     value = accelThreshold,
                                     onValueChange = { accelThreshold = it },
@@ -748,7 +787,7 @@ fun ProviderCreateOrderScreen(
                                 )
                             }
                             Spacer(modifier = Modifier.height(12.dp))
-                             OutlinedTextField(
+                            OutlinedTextField(
                                 value = gasThreshold,
                                 onValueChange = { gasThreshold = it },
                                 label = { Text("Gas Sensitivity (0-1000)") },
@@ -774,21 +813,21 @@ fun ProviderCreateOrderScreen(
                                 }
                             }
                         }
-                        
+
                         Spacer(modifier = Modifier.height(16.dp))
                     }
-                    
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         TextButton(onClick = {
-                            currentStep = CreateOrderStep.CONNECT_DEVICE
+                            currentStep = ProvisionShipmentStep.CONNECT_DEVICE
                         }) { Text("Back") }
-                        
+
                         Spacer(modifier = Modifier.width(16.dp))
-                        
+
                         PrimaryButton(
                             text = "Provision Order",
                             onClick = {
@@ -838,11 +877,11 @@ fun ThresholdCard(
     }
 }
 
-private fun getTitleForStep(step: CreateOrderStep): String {
+private fun getTitleForStep(step: ProvisionShipmentStep): String {
     return when(step) {
-        CreateOrderStep.SELECT_ORDER -> "Select Order"
-        CreateOrderStep.FIND_SHIPPER -> "Assign Shipper"
-        CreateOrderStep.CONNECT_DEVICE -> "Connect Device"
-        CreateOrderStep.SETUP_THRESHOLD -> "Setup Threshold"
+        ProvisionShipmentStep.SELECT_SHIPMENT -> "Select Shipment"
+        ProvisionShipmentStep.FIND_SHIPPER -> "Assign Shipper"
+        ProvisionShipmentStep.CONNECT_DEVICE -> "Connect Device"
+        ProvisionShipmentStep.SETUP_THRESHOLD -> "Setup Threshold"
     }
 }

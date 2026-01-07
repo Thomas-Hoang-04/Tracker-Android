@@ -18,7 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.thomas.cargotracker.ui.viewmodel.user.ShipperViewModel
-import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
+import com.thomas.cargotracker.ui.screens.provider.ProviderShipmentCard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
@@ -67,8 +67,8 @@ fun ShipperHomeScreen(
 
             // Assigned Orders List
             items(orders) { order ->
-                ProviderOrderCard(
-                    order = order,
+                ProviderShipmentCard(
+                    shipment = order,
                     onMoreDetailsClick = { onOrderDetails(order.id) },
                     border = BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
                 )

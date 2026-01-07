@@ -30,11 +30,11 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun ProviderHistoryScreen(
-    onOrderDetails: (String) -> Unit,
+    onShipmentDetails: (String) -> Unit,
     viewModel: ProviderViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
-    val allOrders by viewModel.orders.collectAsState()
+    val allOrders by viewModel.shipments.collectAsState()
     
     Scaffold(
         modifier = Modifier.statusBarsPadding(),
@@ -81,10 +81,10 @@ fun ProviderHistoryScreen(
                     it.id.contains(searchQuery, ignoreCase = true) || it.customerName.contains(searchQuery, ignoreCase = true)
                 }
                 
-                items(filteredOrders) { order ->
-                    ProviderOrderCard(
-                        order = order,
-                        onMoreDetailsClick = { onOrderDetails(order.id) }
+                items(filteredOrders) { shipment ->
+                    ProviderShipmentCard(
+                        shipment = shipment,
+                        onMoreDetailsClick = { onShipmentDetails(shipment.id) }
                     )
                 }
                 
