@@ -27,7 +27,7 @@ sealed class MainNavItem(
     data object Home : MainNavItem(MainRoute.Home, "Home", Icons.Default.Home)
     data object Profile : MainNavItem(MainRoute.Profile, "Profile", Icons.Default.AccountBox)
 
-    data object ProviderCreate : MainNavItem(MainRoute.ProviderCreate, "Provision", Icons.Default.Build)
+    data object ProviderPending : MainNavItem(MainRoute.ProviderPendingOrders, "Pending", Icons.Default.Build)
     data object ProviderHistory : MainNavItem(MainRoute.ProviderHistory, "History", Icons.Default.History)
 
     // Customer Items
@@ -43,7 +43,7 @@ sealed class MainNavItem(
     companion object {
         fun getNavItemsForRole(role: UserRole): List<MainNavItem> {
             return when (role) {
-                UserRole.PROVIDER -> listOf(Home, ProviderCreate, ProviderHistory, Profile)
+                UserRole.PROVIDER -> listOf(Home, ProviderPending, ProviderHistory, Profile)
                 UserRole.CUSTOMER -> listOf(CustomerHome, CustomerHistory, CustomerSearch, Profile)
                 UserRole.SHIPPER -> listOf(ShipperHome, ShipperFindOrder, ShipperHistory, Profile)
                 else -> listOf(Home, Profile)

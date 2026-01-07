@@ -63,15 +63,15 @@ import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ProviderOrderDetailsScreen(
-    orderId: String,
+fun ProviderShipmentDetailsScreen(
+    shipmentId: String,
     onBack: () -> Unit,
     viewModel: ProviderViewModel = hiltViewModel()
 ) {
-    val orders by viewModel.orders.collectAsState()
-    val order = orders.find { it.id == orderId } ?: Shipment(
-        id = orderId,
-        trackingId = orderId.take(8),
+    val orders by viewModel.shipments.collectAsState()
+    val order = orders.find { it.id == shipmentId } ?: Shipment(
+        id = shipmentId,
+        trackingId = shipmentId.take(8),
         status = ShipmentStatus.PENDING,
         description = "Unknown",
         origin = "Unknown",

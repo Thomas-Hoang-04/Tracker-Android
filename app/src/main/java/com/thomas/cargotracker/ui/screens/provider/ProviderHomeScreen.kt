@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -33,21 +34,28 @@ import com.thomas.cargotracker.ui.viewmodel.user.ProviderViewModel
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProviderHomeScreen(
-    providerId: String = "1000003767",
-    onSeeOrderState: () -> Unit = {},
-    onCreateOrder: () -> Unit = {},
-    onOrderHistory: () -> Unit = {},
-    onOrderDetails: (String) -> Unit = {},
+    onShipmentDetails: (String) -> Unit = {},
+    onAcceptOrder: (String) -> Unit = {},
     viewModel: ProviderViewModel = hiltViewModel(),
     authViewModel: AuthViewModel
 ) {
-    val recentOrders by viewModel.orders.collectAsState()
+    val recentShipments by viewModel.shipments.collectAsState()
+    val pendingOrders by viewModel.pendingOrders.collectAsState()
     val filterState by viewModel.filterState.collectAsState()
     val authState by authViewModel.authState.collectAsState()
+    val orderApprovalState by viewModel.orderApprovalState.collectAsState()
 
-    // Refresh orders on screen entry
+    // Refresh data on screen entry
     LaunchedEffect(Unit) {
         viewModel.loadOrders()
+    }
+
+    // Reset approval state when it's successful
+    LaunchedEffect(orderApprovalState) {
+        if (orderApprovalState is ProviderViewModel.OrderApprovalState.Accepted ||
+            orderApprovalState is ProviderViewModel.OrderApprovalState.Rejected) {
+            viewModel.resetOrderApprovalState()
+        }
     }
 
     Scaffold(
@@ -71,20 +79,42 @@ fun ProviderHomeScreen(
                         color = MaterialTheme.colorScheme.onBackground
                     )
                     Text(
-                        text = "ID: ${(authState.currentUser?.id ?: providerId).substringBefore("-")}",
+                        text = "ID: ${authState.currentUser?.id?.substringBefore("-") ?: ""}",
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.primary
                     )
                 }
             }
 
-            // Filters
+            // Pending Orders Section (từ Customer)
+            if (pendingOrders.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "Pending Requests (${pendingOrders.size})",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFFE65100), // Orange
+                        modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
+                    )
+                }
+
+                items(pendingOrders) { order ->
+                    ProviderPendingOrderCard(
+                        order = order,
+                        onAccept = { onAcceptOrder(order.id) },
+                        onReject = { reason -> viewModel.rejectOrder(order.id, reason) },
+                        isLoading = orderApprovalState is ProviderViewModel.OrderApprovalState.Loading
+                    )
+                }
+            }
+
+            // Filters for Shipments
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
                         value = filterState.search,
                         onValueChange = { viewModel.updateSearchFilter(it) },
-                        label = { Text("Search Orders") },
+                        label = { Text("Search Shipments") },
                         modifier = Modifier.fillMaxWidth(),
                         singleLine = true
                     )
@@ -111,27 +141,34 @@ fun ProviderHomeScreen(
             }
 
             item {
-                 Text(
-                    text = "Orders",
+                Text(
+                    text = "Active Shipments",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
                 )
             }
 
-
-            // Orders List
-            items(recentOrders) { order ->
-                ProviderOrderCard(
-                    order = order,
-                    onMoreDetailsClick = { onOrderDetails(order.id) }
+            // Shipments List
+            items(recentShipments) { shipment ->
+                ProviderShipmentCard(
+                    shipment = shipment,
+                    onMoreDetailsClick = { onShipmentDetails(shipment.id) }
                 )
             }
-            
-            if (recentOrders.isEmpty()) {
+
+            if (recentShipments.isEmpty() && pendingOrders.isEmpty()) {
                 item {
                     Text(
-                        text = "No orders found.",
+                        text = "No shipments or pending orders found.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else if (recentShipments.isEmpty()) {
+                item {
+                    Text(
+                        text = "No active shipments.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
