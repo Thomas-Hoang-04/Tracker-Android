@@ -5,6 +5,8 @@ import com.thomas.cargotracker.keystore.TokenManager
 import com.thomas.cargotracker.network.ApiInterface
 import com.thomas.cargotracker.network.AuthInterface
 import com.thomas.cargotracker.repository.AuthRepository
+import com.thomas.cargotracker.repository.OrderRepository
+import com.thomas.cargotracker.repository.OrderRepositoryImpl
 import com.thomas.cargotracker.repository.ShipmentRepository
 import com.thomas.cargotracker.repository.ShipmentRepositoryImpl
 import com.thomas.cargotracker.repository.UserRepository
@@ -38,5 +40,11 @@ object RepositoryModule {
     fun provideShipmentRepository(
         apiInterface: ApiInterface
     ): ShipmentRepository = ShipmentRepositoryImpl(apiInterface)
+
+    @Provides
+    @Singleton
+    fun provideOrderRepository(
+        apiInterface: ApiInterface
+    ): OrderRepository = OrderRepositoryImpl(apiInterface)
 }
 
