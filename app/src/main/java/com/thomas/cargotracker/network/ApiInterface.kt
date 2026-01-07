@@ -1,23 +1,6 @@
 package com.thomas.cargotracker.network
 
-import com.thomas.cargotracker.dto.AdminCreateUserRequest
-import com.thomas.cargotracker.dto.AssignDeviceRequest
-import com.thomas.cargotracker.dto.AssignShipperRequest
-import com.thomas.cargotracker.dto.CancelShipmentRequest
-import com.thomas.cargotracker.dto.ChangePasswordRequest
-import com.thomas.cargotracker.dto.CompleteShipmentRequest
-import com.thomas.cargotracker.dto.CreateShipmentRequest
-import com.thomas.cargotracker.dto.LocationResponse
-import com.thomas.cargotracker.dto.ShipmentFilterRequest
-import com.thomas.cargotracker.dto.ShipmentListResponse
-import com.thomas.cargotracker.dto.ShipmentResponse
-import com.thomas.cargotracker.dto.ShipmentStatus
-import com.thomas.cargotracker.dto.SuccessResponse
-import com.thomas.cargotracker.dto.TelemetryResponse
-import com.thomas.cargotracker.dto.UpdateProfileRequest
-import com.thomas.cargotracker.dto.UpdateShipmentRequest
-import com.thomas.cargotracker.dto.UserResponse
-import com.thomas.cargotracker.dto.UserRole
+import com.thomas.cargotracker.dto.*
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
@@ -140,4 +123,44 @@ interface ApiInterface {
     suspend fun filterShipments(
         @Body request: ShipmentFilterRequest
     ): Response<ShipmentListResponse>
+
+    // Order Endpoints (/api/orders)
+
+    @POST("api/orders")
+    suspend fun createOrder(
+        @Body request: CreateOrderRequest
+    ): Response<OrderResponse>
+
+    @GET("api/orders")
+    suspend fun getAllOrders(): Response<List<OrderResponse>>
+
+    @GET("api/orders/{id}")
+    suspend fun getOrderById(
+        @Path("id") id: String
+    ): Response<OrderResponse>
+
+    @GET("api/orders/status/{status}")
+    suspend fun getOrdersByStatus(
+        @Path("status") status: OrderStatus
+    ): Response<List<OrderResponse>>
+
+    @GET("api/orders/pending")
+    suspend fun getPendingOrders(): Response<List<OrderResponse>>
+
+    @POST("api/orders/{id}/accept")
+    suspend fun acceptOrder(
+        @Path("id") id: String,
+        @Body request: AcceptOrderRequest
+    ): Response<OrderResponse>
+
+    @POST("api/orders/{id}/reject")
+    suspend fun rejectOrder(
+        @Path("id") id: String,
+        @Body request: RejectOrderRequest
+    ): Response<OrderResponse>
+
+    @POST("api/orders/filter")
+    suspend fun filterOrders(
+        @Body request: OrderFilterRequest
+    ): Response<OrderListResponse>
 }
