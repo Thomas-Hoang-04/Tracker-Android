@@ -41,17 +41,25 @@ class ProviderViewModel @Inject constructor(
         shipmentRepository.shipments,
         _filterState
     ) { shipments, filter ->
-        if (filter.search.isBlank()) {
-            shipments
-        } else {
+        var filteredList = shipments
+
+        // 1. Filter by Status (Client-side fallback/immediate responsiveness)
+        if (filter.status != null) {
+            filteredList = filteredList.filter { it.status == filter.status }
+        }
+
+        // 2. Filter by Search Query
+        if (filter.search.isNotBlank()) {
             val query = filter.search.lowercase()
-            shipments.filter {
+            filteredList = filteredList.filter {
                 it.description.lowercase().contains(query) ||
                 it.origin.lowercase().contains(query) ||
                 it.destination.lowercase().contains(query) ||
                 it.trackingId.lowercase().contains(query)
             }
         }
+        
+        filteredList
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5000),
@@ -62,6 +70,10 @@ class ProviderViewModel @Inject constructor(
     data class UserResult(val name: String, val id: String)
     private val _shippers = MutableStateFlow<List<UserResult>>(emptyList())
     val shippers: StateFlow<List<UserResult>> = _shippers.asStateFlow()
+
+    // Selected Shipment (Detailed view)
+    private val _selectedShipment = MutableStateFlow<Shipment?>(null)
+    val selectedShipment: StateFlow<Shipment?> = _selectedShipment.asStateFlow()
 
     // Pending Orders for Provider approval
     val pendingOrders: StateFlow<List<OrderResponse>> = orderRepository.pendingOrders
@@ -92,11 +104,8 @@ class ProviderViewModel @Inject constructor(
 
     fun loadShipments() {
         viewModelScope.launch {
-            // Pass null for search to avoid backend lower(bytea) error
-            shipmentRepository.filterShipments(
-                status = _filterState.value.status,
-                search = null 
-            )
+            // Always fetch ALL shipments. Filtering is now handled locally in the 'shipments' flow.
+            shipmentRepository.fetchShipments()
         }
     }
 
@@ -113,12 +122,12 @@ class ProviderViewModel @Inject constructor(
 
     fun updateStatusFilter(status: ShipmentStatus?) {
         _filterState.update { it.copy(status = status) }
-        loadShipments()
+        // No network call needed. 'shipments' flow updates automatically via combine.
     }
 
     fun updateSearchFilter(search: String) {
         _filterState.update { it.copy(search = search) }
-        loadShipments()
+        // No network call needed.
     }
     
     fun applySearch() {
@@ -179,6 +188,12 @@ class ProviderViewModel @Inject constructor(
             } catch (e: Exception) {
                 _orderApprovalState.value = OrderApprovalState.Error(e.message ?: "Unknown error")
             }
+        }
+    }
+
+    fun loadShipmentDetails(id: String) {
+        viewModelScope.launch {
+            _selectedShipment.value = shipmentRepository.getShipment(id)
         }
     }
 

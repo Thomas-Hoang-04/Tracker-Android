@@ -10,19 +10,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
@@ -39,15 +39,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.thomas.cargotracker.data.model.ShipmentStatus
 import com.thomas.cargotracker.dto.OrderResponse
 import com.thomas.cargotracker.dto.OrderStatus
-import com.thomas.cargotracker.data.model.ShipmentStatus
-import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
+import com.thomas.cargotracker.ui.screens.provider.BatteryStatusCard
+import com.thomas.cargotracker.ui.screens.provider.LocationCard
 import com.thomas.cargotracker.ui.screens.provider.ProviderShipmentCard
 import com.thomas.cargotracker.ui.screens.provider.TelemetryGrid
-import com.thomas.cargotracker.ui.screens.provider.LocationCard
+import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -156,55 +155,61 @@ fun CustomerOrderDetailsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        // Display Shipment Status if it's relevant to the customer (In Transit, Delivered, Cancelled)
-                        // For Pending/Assigned shipments, we show "Accepted" from the Order status
-                        val useShipmentStatus = shipment != null && 
-                                              (shipment.status == ShipmentStatus.IN_TRANSIT || 
-                                               shipment.status == ShipmentStatus.COMPLETED || 
-                                               shipment.status == ShipmentStatus.CANCELLED)
-
-                        val displayStatus = if (useShipmentStatus) shipment!!.status.name else order.status.name
-                        
-                        val statusColor = if (useShipmentStatus) {
-                            when (shipment!!.status) {
-                                ShipmentStatus.IN_TRANSIT -> Color(0xFFFFF3E0) // Orange
-                                ShipmentStatus.COMPLETED -> Color(0xFFE8F5E9)
-                                ShipmentStatus.CANCELLED -> Color(0xFFFFEBEE)
-                                else -> MaterialTheme.colorScheme.surfaceVariant
-                            }
-                        } else {
-                            when (order.status) {
+                        Column(horizontalAlignment = Alignment.End) {
+                            // Order Status
+                            val orderStatusColor = when (order.status) {
                                 OrderStatus.ACCEPTED -> Color(0xFFE8F5E9)
                                 OrderStatus.REJECTED -> Color(0xFFFFEBEE)
                                 OrderStatus.PENDING -> MaterialTheme.colorScheme.surfaceVariant
                             }
-                        }
-                        
-                        val contentColor = if (useShipmentStatus) {
-                            when (shipment!!.status) {
-                                ShipmentStatus.IN_TRANSIT -> Color(0xFFE65100)
-                                ShipmentStatus.COMPLETED -> Color(0xFF2E7D32)
-                                ShipmentStatus.CANCELLED -> Color(0xFFC62828)
-                                else -> MaterialTheme.colorScheme.onSurfaceVariant
-                            }
-                        } else {
-                            when (order.status) {
+                            val orderContentColor = when (order.status) {
                                 OrderStatus.ACCEPTED -> Color(0xFF2E7D32)
                                 OrderStatus.REJECTED -> Color(0xFFC62828)
                                 OrderStatus.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant
                             }
-                        }
 
-                        Surface(
-                            color = statusColor,
-                            shape = RoundedCornerShape(8.dp)
-                        ) {
-                            Text(
-                                text = displayStatus.replace("_", " "),
-                                style = MaterialTheme.typography.labelSmall,
-                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                color = contentColor
-                            )
+                            Surface(
+                                color = orderStatusColor,
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text(
+                                    text = "Order: ${order.status.name}",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                    color = orderContentColor
+                                )
+                            }
+
+                            // Shipment Status (if exists)
+                            if (shipment != null) {
+                                Spacer(modifier = Modifier.height(4.dp))
+                                val shipmentStatusColor = when (shipment.status) {
+                                    ShipmentStatus.IN_TRANSIT -> Color(0xFFFFF3E0) // Orange
+                                    ShipmentStatus.COMPLETED -> Color(0xFFE8F5E9)
+                                    ShipmentStatus.CANCELLED -> Color(0xFFFFEBEE)
+                                    ShipmentStatus.ASSIGNED -> Color(0xFFE3F2FD)
+                                    else -> MaterialTheme.colorScheme.surfaceVariant
+                                }
+                                val shipmentContentColor = when (shipment.status) {
+                                    ShipmentStatus.IN_TRANSIT -> Color(0xFFE65100)
+                                    ShipmentStatus.COMPLETED -> Color(0xFF2E7D32)
+                                    ShipmentStatus.CANCELLED -> Color(0xFFC62828)
+                                    ShipmentStatus.ASSIGNED -> Color(0xFF1565C0)
+                                    else -> MaterialTheme.colorScheme.onSurfaceVariant
+                                }
+
+                                Surface(
+                                    color = shipmentStatusColor,
+                                    shape = RoundedCornerShape(8.dp)
+                                ) {
+                                    Text(
+                                        text = "Shipment: ${shipment.status.name.replace("_", " ")}",
+                                        style = MaterialTheme.typography.labelSmall,
+                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                        color = shipmentContentColor
+                                    )
+                                }
+                            }
                         }
                     }
                     Spacer(modifier = Modifier.height(12.dp))
@@ -310,9 +315,17 @@ fun CustomerOrderDetailsScreen(
 
                 // Full Telemetry
                 if (shipment.sensorData != null) {
+                    Text("Device Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    BatteryStatusCard(
+                        batteryLevel = shipment.sensorData.batteryLevel,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    
+                    Spacer(modifier = Modifier.height(16.dp))
+                    
                     Text("Full Sensor Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     TelemetryGrid(
-                        sensorData = shipment.sensorData!!,
+                        sensorData = shipment.sensorData,
                         modifier = Modifier.fillMaxWidth()
                     )
                 }

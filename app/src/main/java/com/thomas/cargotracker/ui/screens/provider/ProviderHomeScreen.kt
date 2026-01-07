@@ -108,7 +108,6 @@ fun ProviderHomeScreen(
                 }
             }
 
-            // Filters for Shipments
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedTextField(
@@ -133,7 +132,13 @@ fun ProviderHomeScreen(
                             FilterChip(
                                 selected = filterState.status == status,
                                 onClick = { viewModel.updateStatusFilter(status) },
-                                label = { Text(status.name) }
+                                label = { 
+                                    Text(
+                                        status.name.replace("_", " ")
+                                            .lowercase()
+                                            .replaceFirstChar { it.titlecase() }
+                                    ) 
+                                }
                             )
                         }
                     }
@@ -142,7 +147,7 @@ fun ProviderHomeScreen(
 
             item {
                 Text(
-                    text = "Active Shipments",
+                    text = "Shipment List",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 16.dp, bottom = 8.dp)
@@ -168,7 +173,7 @@ fun ProviderHomeScreen(
             } else if (recentShipments.isEmpty()) {
                 item {
                     Text(
-                        text = "No active shipments.",
+                        text = "No shipments found.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

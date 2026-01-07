@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -37,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.thomas.cargotracker.data.model.ShipmentStatus
 import com.thomas.cargotracker.domain.model.Shipment
@@ -45,10 +47,10 @@ import com.thomas.cargotracker.dto.OrderStatus
 
 @Composable
 fun CustomerOrderCard(
+    modifier: Modifier = Modifier,
     order: OrderResponse,
     shipmentStatus: ShipmentStatus? = null,
     onMoreDetailsClick: () -> Unit,
-    modifier: Modifier = Modifier,
     border: BorderStroke = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
 ) {
     OutlinedCard(
@@ -78,59 +80,73 @@ fun CustomerOrderCard(
                     Text(
                         text = "Provider ID: ${order.providerId.take(8)}...",
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
 
-                // Display Shipment Status if it's relevant to the customer (In Transit, Delivered, Cancelled)
-                // For Pending/Assigned shipments, we show "Accepted" from the Order status
-                val useShipmentStatus = shipmentStatus != null && 
-                                      (shipmentStatus == ShipmentStatus.IN_TRANSIT || 
-                                       shipmentStatus == ShipmentStatus.COMPLETED || 
-                                       shipmentStatus == ShipmentStatus.CANCELLED)
+                Spacer(modifier = Modifier.width(8.dp))
 
-                val displayStatus = if (useShipmentStatus) shipmentStatus!!.name else order.status.name
-                
-                val statusColor = if (useShipmentStatus) {
-                    when (shipmentStatus) {
-                         ShipmentStatus.IN_TRANSIT -> Color(0xFFFFF3E0) // Orange
-                         ShipmentStatus.COMPLETED -> Color(0xFFE8F5E9)
-                         ShipmentStatus.CANCELLED -> Color(0xFFFFEBEE)
-                         else -> MaterialTheme.colorScheme.surfaceVariant // Should not happen given check
-                    }
-                } else {
-                    when (order.status) {
+                Column(horizontalAlignment = Alignment.End) {
+                    // Order Status
+                    val orderStatusColor = when (order.status) {
                         OrderStatus.ACCEPTED -> Color(0xFFE8F5E9)
                         OrderStatus.REJECTED -> Color(0xFFFFEBEE)
                         OrderStatus.PENDING -> MaterialTheme.colorScheme.surfaceVariant
                     }
-                }
-                
-                val contentColor = if (useShipmentStatus) {
-                    when (shipmentStatus) {
-                         ShipmentStatus.IN_TRANSIT -> Color(0xFFE65100)
-                         ShipmentStatus.COMPLETED -> Color(0xFF2E7D32)
-                         ShipmentStatus.CANCELLED -> Color(0xFFC62828)
-                         else -> MaterialTheme.colorScheme.onSurfaceVariant
-                    }
-                } else {
-                    when (order.status) {
+                    val orderContentColor = when (order.status) {
                         OrderStatus.ACCEPTED -> Color(0xFF2E7D32)
                         OrderStatus.REJECTED -> Color(0xFFC62828)
                         OrderStatus.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
-                }
+                    
+                    Surface(
+                        color = orderStatusColor,
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Text(
+                            text = "Order: ${order.status.name}",
+                            style = MaterialTheme.typography.labelSmall,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            color = orderContentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
 
-                Surface(
-                    color = statusColor,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Text(
-                        text = displayStatus.replace("_", " "),
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        color = contentColor
-                    )
+                    // Shipment Status (if exists)
+                    if (shipmentStatus != null) {
+                        Spacer(modifier = Modifier.height(4.dp))
+                        val shipmentStatusColor = when (shipmentStatus) {
+                            ShipmentStatus.IN_TRANSIT -> Color(0xFFFFF3E0) // Orange
+                            ShipmentStatus.COMPLETED -> Color(0xFFE8F5E9)
+                            ShipmentStatus.CANCELLED -> Color(0xFFFFEBEE)
+                            ShipmentStatus.ASSIGNED -> Color(0xFFE3F2FD)
+                            else -> MaterialTheme.colorScheme.surfaceVariant
+                        }
+                        val shipmentContentColor = when (shipmentStatus) {
+                            ShipmentStatus.IN_TRANSIT -> Color(0xFFE65100)
+                            ShipmentStatus.COMPLETED -> Color(0xFF2E7D32)
+                            ShipmentStatus.CANCELLED -> Color(0xFFC62828)
+                            ShipmentStatus.ASSIGNED -> Color(0xFF1565C0)
+                            else -> MaterialTheme.colorScheme.onSurfaceVariant
+                        }
+
+                        Surface(
+                            color = shipmentStatusColor,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Shipment: ${shipmentStatus.name.replace("_", " ")}",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                color = shipmentContentColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                    }
                 }
             }
 

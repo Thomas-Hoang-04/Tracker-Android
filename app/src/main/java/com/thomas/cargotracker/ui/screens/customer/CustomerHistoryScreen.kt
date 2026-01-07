@@ -35,6 +35,7 @@ fun CustomerHistoryScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val orders by viewModel.orders.collectAsState()
+    val shipments by viewModel.shipments.collectAsState()
 
     Scaffold(
         modifier = Modifier.statusBarsPadding(),
@@ -79,8 +80,14 @@ fun CustomerHistoryScreen(
                 }
 
                 items(filteredOrders) { order ->
+                    // Find the shipment for this order to display status
+                    val relatedShipment = shipments.find { 
+                        it.id == order.shipmentId || (order.shipmentId != null && it.id.equals(order.shipmentId, ignoreCase = true))
+                    }
+
                     CustomerOrderCard(
                         order = order,
+                        shipmentStatus = relatedShipment?.status,
                         onMoreDetailsClick = { onOrderDetails(order.id) }
                     )
                 }

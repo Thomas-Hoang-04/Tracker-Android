@@ -53,6 +53,7 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.LocationOff
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.BatteryStd
 import androidx.compose.material3.Card
 import androidx.compose.ui.platform.LocalContext
 import java.time.Instant
@@ -62,6 +63,7 @@ import java.time.format.FormatStyle
 import com.thomas.cargotracker.domain.model.SensorData
 import com.thomas.cargotracker.domain.model.Shipment
 import com.thomas.cargotracker.dto.OrderResponse
+import com.thomas.cargotracker.ui.screens.customer.StatItem
 
 @Composable
 fun ProviderActionCard(
@@ -116,100 +118,137 @@ fun ProviderShipmentCard(
     showStats: Boolean = true,
     border: BorderStroke = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
 ) {
-    OutlinedCard(
-        modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.outlinedCardColors(
-            containerColor = MaterialTheme.colorScheme.surface
-        ),
-        // Subtle border
-        border = border
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp)
+        OutlinedCard(
+            modifier = modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(16.dp),
+            colors = CardDefaults.outlinedCardColors(
+                containerColor = MaterialTheme.colorScheme.surface
+            ),
+            // Subtle border
+            border = border
         ) {
-            // Header
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier.padding(16.dp)
             ) {
-                Column {
-                    Text(
-                        text = "Shipment #${shipment.trackingId}",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    Text(
-                        text = shipment.customerName,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                Surface(
-                    color = when (shipment.status.name) {
-                        "COMPLETED" -> Color(0xFFE8F5E9) // Light Green
-                        "IN_TRANSIT" -> Color(0xFFE3F2FD) // Light Blue
-                        else -> MaterialTheme.colorScheme.surfaceVariant
-                    },
-                    shape = RoundedCornerShape(8.dp)
+                // Header
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(
-                        text = shipment.status.name, // Or a formatted string
-                        style = MaterialTheme.typography.labelSmall,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                        color = when (shipment.status.name) {
-                            "COMPLETED" -> Color(0xFF2E7D32) // Dark Green
-                            "IN_TRANSIT" -> Color(0xFF1565C0) // Dark Blue
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Shipment #${shipment.trackingId}",
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Text(
+                            text = shipment.customerName,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    Column(horizontalAlignment = Alignment.End) {
+                        // Order Status (Always Accepted for active shipments)
+                        Surface(
+                            color = Color(0xFFE8F5E9), // Light Green
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Order: ACCEPTED",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                color = Color(0xFF2E7D32) // Dark Green
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+
+                        // Shipment Status
+                        val statusColor = when (shipment.status.name) {
+                            "COMPLETED" -> Color(0xFFE8F5E9)
+                            "IN_TRANSIT" -> Color(0xFFFFF3E0) // Light Orange
+                            "ASSIGNED" -> Color(0xFFE3F2FD) // Light Blue
+                            "PENDING" -> MaterialTheme.colorScheme.surfaceVariant
+                            else -> MaterialTheme.colorScheme.surfaceVariant
+                        }
+                        val contentColor = when (shipment.status.name) {
+                            "COMPLETED" -> Color(0xFF2E7D32)
+                            "IN_TRANSIT" -> Color(0xFFE65100) // Dark Orange
+                            "ASSIGNED" -> Color(0xFF1565C0) // Dark Blue
+                            "PENDING" -> MaterialTheme.colorScheme.onSurfaceVariant
                             else -> MaterialTheme.colorScheme.onSurfaceVariant
                         }
-                    )
-                }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Stats Grid
-            if (showStats) {
-                Row(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        StatItem(label = "Product", value = shipment.description)
-                        Spacer(modifier = Modifier.height(4.dp))
-                        StatItem(
-                            label = "Temp",
-                            value = shipment.sensorData?.temperature?.let { "$it°C" } ?: "N/A")
-                        Spacer(modifier = Modifier.height(4.dp))
-                        StatItem(
-                            label = "Battery",
-                            value = shipment.sensorData?.batteryLevel?.let { "$it%" } ?: "N/A",
-                            valueColor = if ((shipment.sensorData?.batteryLevel
-                                    ?: 0) < 20
-                            ) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        StatItem(label = "Created", value = shipment.createdDate.take(10))
-                        Spacer(modifier = Modifier.height(4.dp))
-                        StatItem(
-                            label = "Humidity",
-                            value = shipment.sensorData?.humidity?.let { "$it%" } ?: "N/A")
-                        Spacer(modifier = Modifier.height(4.dp))
-                        StatItem(
-                            label = "Updated",
-                            value = shipment.sensorData?.lastUpdated?.let { 
-                                formatTimestamp(it)
-                            } ?: "Just now"
-                        )
+                        Surface(
+                            color = statusColor,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Text(
+                                text = "Shipment: ${shipment.status.name.replace("_", " ")}",
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                color = contentColor,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
                     }
                 }
-            }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Stats Grid - Only show if data exists and is valid (not null/N/A)
+                if (showStats && shipment.sensorData != null && shipment.sensorData.temperature != null) {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            StatItem(label = "Product", value = shipment.description)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            StatItem(
+                                label = "Temp",
+                                value = "${shipment.sensorData.temperature}°C"
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            StatItem(
+                                label = "Battery",
+                                value = "${shipment.sensorData.batteryLevel}%",
+                                valueColor = if ((shipment.sensorData.batteryLevel
+                                        ?: 0) < 20
+                                ) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            StatItem(label = "Created", value = shipment.createdDate.take(10))
+                            Spacer(modifier = Modifier.height(4.dp))
+                            StatItem(
+                                label = "Humidity",
+                                value = "${shipment.sensorData.humidity}%"
+                            )
+                            Spacer(modifier = Modifier.height(4.dp))
+                            StatItem(
+                                label = "Updated",
+                                value = shipment.sensorData.lastUpdated?.let {
+                                    formatTimestamp(it)
+                                } ?: "Just now"
+                            )
+                        }
+                    }
+                } else {
+                     // Minimal details if no telemetry (cleaner view)
+                     Column(modifier = Modifier.fillMaxWidth()) {
+                            StatItem(label = "Product", value = shipment.description)
+                            Spacer(modifier = Modifier.height(4.dp))
+                            StatItem(label = "Created", value = shipment.createdDate.take(10))
+                    }
+                }
 
             Spacer(modifier = Modifier.height(8.dp))
-
             // Footer action
             if (onMoreDetailsClick != null) {
                 Row(
@@ -230,6 +269,7 @@ fun ProviderShipmentCard(
         }
     }
 }
+
 
 @Composable
 fun ProviderPendingOrderCard(
@@ -390,29 +430,6 @@ fun ProviderPendingOrderCard(
 }
 
 @Composable
-private fun StatItem(
-    label: String,
-    value: String,
-    valueColor: Color = MaterialTheme.colorScheme.onSurface
-) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            text = "$label: ",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyLarge,
-            fontWeight = FontWeight.Bold,
-            color = valueColor,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-    }
-}
-
-@Composable
 fun LocationCard(
     latitude: Double?,
     longitude: Double?,
@@ -554,14 +571,71 @@ fun TelemetryGrid(
     }
 }
 
-private fun formatTimestamp(isoString: String?): String {
+@Composable
+fun BatteryStatusCard(
+    batteryLevel: Int?,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.tertiaryContainer // Distinguishable color
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.BatteryStd,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                    modifier = Modifier.size(32.dp)
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(
+                        text = "Battery Status",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer.copy(alpha = 0.8f)
+                    )
+                    Text(
+                        text = if (batteryLevel != null) "$batteryLevel%" else "Unknown",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onTertiaryContainer
+                    )
+                }
+            }
+            
+            // Visual indicator (simple)
+            if (batteryLevel != null) {
+                Surface(
+                    color = when {
+                        batteryLevel > 50 -> Color(0xFF4CAF50) // Green
+                        batteryLevel > 20 -> Color(0xFFFFC107) // Amber
+                        else -> Color(0xFFF44336) // Red
+                    },
+                    shape = RoundedCornerShape(50),
+                    modifier = Modifier.size(16.dp)
+                ) {}
+            }
+        }
+    }
+}
+
+fun formatTimestamp(isoString: String?): String {
     if (isoString == null) return "Unknown"
     return try {
         val instant = Instant.parse(isoString)
         val zonedDateTime = instant.atZone(ZoneId.systemDefault())
         val formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.MEDIUM)
         zonedDateTime.format(formatter)
-    } catch (e: Exception) {
+    } catch (_: Exception) {
         isoString // Fallback
     }
 }
