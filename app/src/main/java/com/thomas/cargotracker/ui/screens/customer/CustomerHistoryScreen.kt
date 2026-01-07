@@ -23,11 +23,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
-import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
 
 @Composable
 fun CustomerHistoryScreen(
@@ -36,7 +35,7 @@ fun CustomerHistoryScreen(
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val orders by viewModel.orders.collectAsState()
-    
+
     Scaffold(
         modifier = Modifier.statusBarsPadding(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -75,22 +74,20 @@ fun CustomerHistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                // Show ALL orders or just past ones? usually history is everything or completed.
-                // Let's show everything for now to be safe, filtered by search.
-                val filteredOrders = orders.filter { 
+                val filteredOrders = orders.filter {
                     it.id.contains(searchQuery, ignoreCase = true)
                 }
-                
+
                 items(filteredOrders) { order ->
-                    ProviderOrderCard(
+                    CustomerOrderCard(
                         order = order,
                         onMoreDetailsClick = { onOrderDetails(order.id) }
                     )
                 }
-                
+
                 if (filteredOrders.isEmpty()) {
                     item {
-                         Text(
+                        Text(
                             text = "No orders found.",
                             modifier = Modifier.padding(top = 16.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant

@@ -18,8 +18,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.thomas.cargotracker.data.model.ShipmentStatus
+import com.thomas.cargotracker.dto.OrderStatus
 import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
-import com.thomas.cargotracker.ui.screens.provider.ProviderOrderCard
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
@@ -27,13 +28,24 @@ import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
 @Composable
 fun CustomerHomeScreen(
     onOrderDetails: (String) -> Unit,
+    onShipmentDetails: (String) -> Unit,
     onCreateOrder: () -> Unit,
     viewModel: CustomerViewModel = hiltViewModel(),
     authViewModel: AuthViewModel
 ) {
     val orders by viewModel.orders.collectAsState()
+    val shipments by viewModel.shipments.collectAsState()
     val authState by authViewModel.authState.collectAsState()
-    val activeOrders = orders.filter { it.status.name != "DELIVERED" && it.status.name != "CANCELLED" }
+    
+    // Pending/Rejected orders (chưa thành shipment)
+    val pendingOrders = orders.filter { 
+        it.status == OrderStatus.PENDING || it.status == OrderStatus.REJECTED 
+    }
+    
+    // Active shipments (từ accepted orders, chưa delivered/cancelled)
+    val activeShipments = shipments.filter { 
+        it.status != ShipmentStatus.DELIVERED && it.status != ShipmentStatus.CANCELLED 
+    }
 
     Scaffold(
         containerColor = MaterialTheme.colorScheme.background,
@@ -82,25 +94,33 @@ fun CustomerHomeScreen(
 
             item {
                 Text(
-                    text = "Active Shipments",
+                    text = "Active Orders",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(top = 8.dp, bottom = 8.dp)
                 )
             }
 
-            // Recent Orders List (Active)
-            items(activeOrders) { order ->
-                ProviderOrderCard(
+            // Pending/Rejected Orders (chưa được accept)
+            items(pendingOrders) { order ->
+                CustomerOrderCard(
                     order = order,
                     onMoreDetailsClick = { onOrderDetails(order.id) }
                 )
             }
             
-            if (activeOrders.isEmpty()) {
+            // Active Shipments (đã được accept và đang vận chuyển)
+            items(activeShipments) { shipment ->
+                CustomerShipmentCard(
+                    shipment = shipment,
+                    onDetailsClick = { onShipmentDetails(shipment.id) }
+                )
+            }
+
+            if (pendingOrders.isEmpty() && activeShipments.isEmpty()) {
                 item {
                     Text(
-                        text = "No active shipments.",
+                        text = "No active orders.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )

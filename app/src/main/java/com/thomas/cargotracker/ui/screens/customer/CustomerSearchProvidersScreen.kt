@@ -31,12 +31,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun CustomerSearchUserScreen(
+fun CustomerSearchProvidersScreen(
     viewModel: CustomerViewModel = hiltViewModel()
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val users by viewModel.users.collectAsState()
-    
+
     Scaffold(
         modifier = Modifier.statusBarsPadding(),
         containerColor = MaterialTheme.colorScheme.background,
@@ -63,7 +63,7 @@ fun CustomerSearchUserScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp),
-                placeholder = { Text("Search People / Providers...") },
+                placeholder = { Text("Search Providers...") },
                 leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
                 singleLine = true,
                 shape = MaterialTheme.shapes.medium
@@ -75,10 +75,13 @@ fun CustomerSearchUserScreen(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
                 modifier = Modifier.fillMaxSize()
             ) {
-                val filteredUsers = users.filter { 
-                    it.name.contains(searchQuery, ignoreCase = true) || it.role.contains(searchQuery, ignoreCase = true)
+                val filteredUsers = users.filter {
+                    it.name.contains(
+                        searchQuery,
+                        ignoreCase = true
+                    ) || it.role.contains(searchQuery, ignoreCase = true)
                 }
-                
+
                 items(filteredUsers) { user ->
                     Card(
                         onClick = { /* TODO: View User Profile? */ },
@@ -89,16 +92,23 @@ fun CustomerSearchUserScreen(
                         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
                     ) {
                         Column(modifier = Modifier.padding(16.dp)) {
-                            Text(user.name, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                            Text("ID: ${user.id}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Text("Role: ${user.role}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
+                            Text(
+                                user.name,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                "Address: ${user.address}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }
-                
+
                 if (filteredUsers.isEmpty()) {
                     item {
-                         Text(
+                        Text(
                             text = "No users found.",
                             modifier = Modifier.padding(top = 16.dp),
                             color = MaterialTheme.colorScheme.onSurfaceVariant
