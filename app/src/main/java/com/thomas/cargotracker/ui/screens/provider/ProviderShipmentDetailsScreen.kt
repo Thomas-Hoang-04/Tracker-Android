@@ -212,109 +212,21 @@ fun ProviderShipmentDetailsScreen(
                     .height(180.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
             ) {
-                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(16.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
-                ) {
-                    if (order.sensorData?.latitude != null && order.sensorData.longitude != null) {
-                        Icon(Icons.Default.LocationOn, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "${order.sensorData.latitude}, ${order.sensorData.longitude}",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (order.sensorData.isMoving == true) {
-                                Icon(Icons.Default.DirectionsCar, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("In Motion", style = MaterialTheme.typography.bodySmall)
-                            } else {
-                                Icon(Icons.Default.Place, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text("Stationary", style = MaterialTheme.typography.bodySmall)
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(16.dp))
-                        
-                        val context = LocalContext.current
-                        Button(onClick = { 
-                            val lat = order.sensorData.latitude
-                            val lng = order.sensorData.longitude
-                            val label = "Shipment #${order.trackingId}"
-                            val uri = "geo:0,0?q=$lat,$lng($label)".toUri()
-                            val mapIntent = Intent(Intent.ACTION_VIEW, uri)
-                            mapIntent.setPackage("com.google.android.apps.maps")
-                            
-                            try {
-                                context.startActivity(mapIntent)
-                            } catch (_: Exception) {
-                                // Fallback if Google Maps app is not installed (e.g. open in browser or just remove package restriction)
-                                val fallbackIntent = Intent(Intent.ACTION_VIEW, uri)
-                                try {
-                                    context.startActivity(fallbackIntent)
-                                } catch (_: Exception) {
-                                    Toast.makeText(context, "No map app found", Toast.LENGTH_SHORT).show()
-                                }
-                            }
-                        }) {
-                            Text("View on Map")
-                        }
-                    } else {
-                        Icon(Icons.Default.LocationOff, contentDescription = null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text("Location Unavailable", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        if (order.status == ShipmentStatus.PENDING) {
-                            Text("Shipment hasn't started yet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
+                 LocationCard(
+                     latitude = order.sensorData?.latitude,
+                     longitude = order.sensorData?.longitude,
+                     isMoving = order.sensorData?.isMoving,
+                     trackingId = order.trackingId,
+                     modifier = Modifier.fillMaxSize()
+                 )
             }
 
             // --- Telemetry Grid ---
             if (order.sensorData != null) {
                 Text("Sensor Telemetry", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TelemetryCard(
-                            label = "Temperature",
-                            value = "${order.sensorData.temperature ?: "--"}°C",
-                            icon = Icons.Outlined.Thermostat,
-                            modifier = Modifier.weight(1f)
-                        )
-                        TelemetryCard(
-                            label = "Humidity",
-                            value = "${order.sensorData.humidity ?: "--"}%",
-                            icon = Icons.Outlined.WaterDrop,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        TelemetryCard(
-                            label = "Light",
-                            value = "${order.sensorData.light ?: "--"} hPa",
-                            icon = Icons.Outlined.Compress, // Or similar
-                            modifier = Modifier.weight(1f)
-                        )
-                        TelemetryCard(
-                            label = "Signal",
-                            value = "${order.sensorData.signalStrength ?: "--"} dBm",
-                            icon = Icons.Default.SignalCellularAlt,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-                
-                Text(
-                    text = "Last updated: ${order.sensorData.lastUpdated ?: "Unknown"}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.fillMaxWidth(),
-                    textAlign = TextAlign.End
+                TelemetryGrid(
+                    sensorData = order.sensorData,
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 
@@ -340,28 +252,4 @@ fun ProviderShipmentDetailsScreen(
     }
 }
 
-@Composable
-fun TelemetryCard(
-    label: String,
-    value: String,
-    icon: ImageVector,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier,
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
-    ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.Center
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(icon, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(label, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(value, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-        }
-    }
-}
+

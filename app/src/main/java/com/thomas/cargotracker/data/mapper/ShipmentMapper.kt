@@ -30,23 +30,23 @@ object ShipmentMapper {
         )
     }
 
-    fun mapSensorData(telemetry: TelemetryResponse?, location: LocationResponse?): SensorData? {
-        if (telemetry == null && location == null) return null
+    fun mapSensorData(telemetry: TelemetryResponse?): SensorData? {
+        if (telemetry == null) return null
         
         return SensorData(
-            temperature = telemetry?.temperature,
-            humidity = telemetry?.humidity,
-            co2 = telemetry?.co2,
-            light = telemetry?.light,
-            latitude = telemetry?.latitude ?: location?.latitude,
-            longitude = telemetry?.longitude ?: location?.longitude,
-            speed = telemetry?.speed ?: location?.speed,
-            accuracy = telemetry?.accuracy ?: location?.accuracy,
-            lean = telemetry?.lean,
-            batteryLevel = telemetry?.batteryLevel,
-            signalStrength = telemetry?.signalStrength,
-            isMoving = telemetry?.isMoving,
-            lastUpdated = telemetry?.time ?: location?.time
+            temperature = telemetry.temperature,
+            humidity = telemetry.humidity,
+            co2 = telemetry.co2,
+            light = telemetry.light,
+            latitude = telemetry.latitude,
+            longitude = telemetry.longitude,
+            speed = telemetry.speed,
+            accuracy = telemetry.accuracy,
+            lean = telemetry.lean,
+            batteryLevel = telemetry.batteryLevel,
+            signalStrength = telemetry.signalStrength,
+            isMoving = telemetry.isMoving,
+            lastUpdated = telemetry.time
         )
     }
 }

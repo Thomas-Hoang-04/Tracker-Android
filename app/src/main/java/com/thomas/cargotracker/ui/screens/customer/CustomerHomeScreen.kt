@@ -47,7 +47,7 @@ fun CustomerHomeScreen(
     // Active shipments (Accepted orders that are not Delivered/Cancelled)
     // Sort by "higher steps" first: IN_TRANSIT > ASSIGNED > PENDING
     val activeShipments = shipments
-        .filter { it.status != ShipmentStatus.DELIVERED && it.status != ShipmentStatus.CANCELLED }
+        .filter { it.status != ShipmentStatus.COMPLETED && it.status != ShipmentStatus.CANCELLED }
         .sortedByDescending { it.status.ordinal }
 
     Scaffold(
@@ -121,12 +121,22 @@ fun CustomerHomeScreen(
                 // Active Shipments (Orders in progress)
                 items(activeShipments) { shipment ->
                     // Find the order for this shipment to display consistent Order info
-                    val relatedOrder = orders.find { it.shipmentId == shipment.id }
+                    val relatedOrder = orders.find { 
+                        it.shipmentId.equals(shipment.id, ignoreCase = true) 
+                    }
+                    
                     if (relatedOrder != null) {
                         CustomerOrderCard(
                             order = relatedOrder,
                             shipmentStatus = shipment.status,
                             onMoreDetailsClick = { onOrderDetails(relatedOrder.id) }
+                        )
+                    } else {
+                        // Fallback: Display shipment card if order not found (should be rare)
+                        // identifying via shipment tracking ID for now if order ID missing
+                        CustomerShipmentCard(
+                            shipment = shipment,
+                            onDetailsClick = { /* Cannot navigate without order ID usually, maybe show toast or just display info */ }
                         )
                     }
                 }

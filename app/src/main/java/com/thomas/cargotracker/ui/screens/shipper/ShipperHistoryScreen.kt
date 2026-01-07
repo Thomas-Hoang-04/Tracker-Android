@@ -92,9 +92,9 @@ fun ShipperHistoryScreen(
                         label = { Text("All") }
                     )
                     FilterChip(
-                        selected = selectedStatus == ShipmentStatus.DELIVERED,
-                        onClick = { selectedStatus = ShipmentStatus.DELIVERED },
-                        label = { Text("Delivered") }
+                        selected = selectedStatus == ShipmentStatus.COMPLETED,
+                        onClick = { selectedStatus = ShipmentStatus.COMPLETED },
+                        label = { Text("Completed") }
                     )
                     FilterChip(
                         selected = selectedStatus == ShipmentStatus.CANCELLED,

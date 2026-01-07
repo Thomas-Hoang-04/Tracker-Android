@@ -29,6 +29,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.thomas.cargotracker.ui.screens.provider.ProviderShipmentCard
+import com.thomas.cargotracker.ui.screens.provider.TelemetryGrid
+import com.thomas.cargotracker.ui.screens.provider.LocationCard
 import com.thomas.cargotracker.domain.model.Shipment
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -87,28 +89,14 @@ fun ShipperOrderDetailsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
              // Map Placeholder (Top)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp),
-                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f)
-                 )
-            ) {
-                 Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Place,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text("Map View Placeholder")
-                }
-            }
+             // Map View
+            LocationCard(
+                latitude = order.sensorData?.latitude,
+                longitude = order.sensorData?.longitude,
+                isMoving = order.sensorData?.isMoving,
+                trackingId = order.trackingId,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             // Route Info
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -125,8 +113,18 @@ fun ShipperOrderDetailsScreen(
             // Detailed Stats
             ProviderShipmentCard(
                 shipment = order,
-                onMoreDetailsClick = { /* No-op */ }
+                onMoreDetailsClick = { /* No-op */ },
+                showStats = false
             )
+
+            // Full Telemetry
+            if (order.sensorData != null) {
+                Text("Full Sensor Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                TelemetryGrid(
+                    sensorData = order.sensorData!!,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
 
             // Actions
             if (order.status == ShipmentStatus.ASSIGNED) {

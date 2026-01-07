@@ -46,6 +46,8 @@ import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
 import androidx.compose.material3.Button
 import androidx.compose.material3.OutlinedButton
 import com.thomas.cargotracker.ui.screens.provider.ProviderShipmentCard
+import com.thomas.cargotracker.ui.screens.provider.TelemetryGrid
+import com.thomas.cargotracker.ui.screens.provider.LocationCard
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -125,28 +127,14 @@ fun CustomerOrderDetailsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Map Placeholder (Top) - mimicking design
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(250.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha=0.5f) // Placeholder color
-                )
-            ) {
-                Column(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalArrangement = Arrangement.Center,
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Place,
-                        contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Text("Map View Placeholder")
-                }
-            }
+            // Map View
+            LocationCard(
+                latitude = shipment?.sensorData?.latitude,
+                longitude = shipment?.sensorData?.longitude,
+                isMoving = shipment?.sensorData?.isMoving,
+                trackingId = order.id,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             // Order Info Card
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -172,7 +160,7 @@ fun CustomerOrderDetailsScreen(
                         // For Pending/Assigned shipments, we show "Accepted" from the Order status
                         val useShipmentStatus = shipment != null && 
                                               (shipment.status == ShipmentStatus.IN_TRANSIT || 
-                                               shipment.status == ShipmentStatus.DELIVERED || 
+                                               shipment.status == ShipmentStatus.COMPLETED || 
                                                shipment.status == ShipmentStatus.CANCELLED)
 
                         val displayStatus = if (useShipmentStatus) shipment!!.status.name else order.status.name
@@ -180,7 +168,7 @@ fun CustomerOrderDetailsScreen(
                         val statusColor = if (useShipmentStatus) {
                             when (shipment!!.status) {
                                 ShipmentStatus.IN_TRANSIT -> Color(0xFFFFF3E0) // Orange
-                                ShipmentStatus.DELIVERED -> Color(0xFFE8F5E9)
+                                ShipmentStatus.COMPLETED -> Color(0xFFE8F5E9)
                                 ShipmentStatus.CANCELLED -> Color(0xFFFFEBEE)
                                 else -> MaterialTheme.colorScheme.surfaceVariant
                             }
@@ -195,7 +183,7 @@ fun CustomerOrderDetailsScreen(
                         val contentColor = if (useShipmentStatus) {
                             when (shipment!!.status) {
                                 ShipmentStatus.IN_TRANSIT -> Color(0xFFE65100)
-                                ShipmentStatus.DELIVERED -> Color(0xFF2E7D32)
+                                ShipmentStatus.COMPLETED -> Color(0xFF2E7D32)
                                 ShipmentStatus.CANCELLED -> Color(0xFFC62828)
                                 else -> MaterialTheme.colorScheme.onSurfaceVariant
                             }
@@ -316,8 +304,18 @@ fun CustomerOrderDetailsScreen(
             // Detailed Stats
             if (shipment != null) {
                 ProviderShipmentCard(
-                    shipment = shipment
+                    shipment = shipment,
+                    showStats = false
                 )
+
+                // Full Telemetry
+                if (shipment.sensorData != null) {
+                    Text("Full Sensor Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    TelemetryGrid(
+                        sensorData = shipment.sensorData!!,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
 
                 // Display Assigned Shipper Info
                 if (shipment.shipperId != null) {
