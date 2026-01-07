@@ -41,7 +41,6 @@ import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
 @Composable
 fun AdminHomeScreen(
     onManageUsers: () -> Unit,
-    onViewShipments: () -> Unit,
     onProfile: () -> Unit,
     authViewModel: AuthViewModel
 ) {
@@ -131,14 +130,6 @@ fun AdminHomeScreen(
                         description = "View, create, and manage users.",
                         icon = Icons.Default.Group,
                         onClick = onManageUsers
-                    )
-                }
-                item {
-                    AdminDashboardCard(
-                        title = "All Shipments",
-                        description = "View and manage all system shipments.",
-                        icon = Icons.AutoMirrored.Filled.List,
-                        onClick = onViewShipments
                     )
                 }
             }
