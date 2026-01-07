@@ -41,7 +41,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.thomas.cargotracker.dto.OrderResponse
 import com.thomas.cargotracker.dto.OrderStatus
+import com.thomas.cargotracker.data.model.ShipmentStatus
 import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import com.thomas.cargotracker.ui.screens.provider.ProviderShipmentCard
+import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +61,14 @@ fun CustomerOrderDetailsScreen(
     LaunchedEffect(orderId) {
         if (orders.none { it.id == orderId }) {
             viewModel.refreshOrders() // Refresh to get the order into the list
+        }
+    }
+
+    // Auto-refresh for live telemetry
+    LaunchedEffect(Unit) {
+        while(true) {
+            delay(30_000) // 30 seconds
+            viewModel.refreshOrders() // Pull fresh data (telemetry updates)
         }
     }
 
@@ -82,6 +95,10 @@ fun CustomerOrderDetailsScreen(
         createdAt = null,
         updatedAt = null
     )
+
+    // Fetch related shipment if it exists
+    val shipments by viewModel.shipments.collectAsState()
+    val shipment = order.shipmentId?.let { id -> shipments.find { it.id == id } }
 
     Scaffold(
         modifier = Modifier.statusBarsPadding(),
@@ -151,23 +168,54 @@ fun CustomerOrderDetailsScreen(
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        Surface(
-                            color = when (order.status) {
+                        // Display Shipment Status if it's relevant to the customer (In Transit, Delivered, Cancelled)
+                        // For Pending/Assigned shipments, we show "Accepted" from the Order status
+                        val useShipmentStatus = shipment != null && 
+                                              (shipment.status == ShipmentStatus.IN_TRANSIT || 
+                                               shipment.status == ShipmentStatus.DELIVERED || 
+                                               shipment.status == ShipmentStatus.CANCELLED)
+
+                        val displayStatus = if (useShipmentStatus) shipment!!.status.name else order.status.name
+                        
+                        val statusColor = if (useShipmentStatus) {
+                            when (shipment!!.status) {
+                                ShipmentStatus.IN_TRANSIT -> Color(0xFFFFF3E0) // Orange
+                                ShipmentStatus.DELIVERED -> Color(0xFFE8F5E9)
+                                ShipmentStatus.CANCELLED -> Color(0xFFFFEBEE)
+                                else -> MaterialTheme.colorScheme.surfaceVariant
+                            }
+                        } else {
+                            when (order.status) {
                                 OrderStatus.ACCEPTED -> Color(0xFFE8F5E9)
                                 OrderStatus.REJECTED -> Color(0xFFFFEBEE)
                                 OrderStatus.PENDING -> MaterialTheme.colorScheme.surfaceVariant
-                            },
+                            }
+                        }
+                        
+                        val contentColor = if (useShipmentStatus) {
+                            when (shipment!!.status) {
+                                ShipmentStatus.IN_TRANSIT -> Color(0xFFE65100)
+                                ShipmentStatus.DELIVERED -> Color(0xFF2E7D32)
+                                ShipmentStatus.CANCELLED -> Color(0xFFC62828)
+                                else -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        } else {
+                            when (order.status) {
+                                OrderStatus.ACCEPTED -> Color(0xFF2E7D32)
+                                OrderStatus.REJECTED -> Color(0xFFC62828)
+                                OrderStatus.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant
+                            }
+                        }
+
+                        Surface(
+                            color = statusColor,
                             shape = RoundedCornerShape(8.dp)
                         ) {
                             Text(
-                                text = order.status.name,
+                                text = displayStatus.replace("_", " "),
                                 style = MaterialTheme.typography.labelSmall,
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                                color = when (order.status) {
-                                    OrderStatus.ACCEPTED -> Color(0xFF2E7D32)
-                                    OrderStatus.REJECTED -> Color(0xFFC62828)
-                                    OrderStatus.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant
-                                }
+                                color = contentColor
                             )
                         }
                     }
@@ -199,7 +247,7 @@ fun CustomerOrderDetailsScreen(
             // Tracking Requirements
             if (order.requireTemperatureTracking || order.requireHumidityTracking || order.requireLocationTracking) {
                 Text("Tracking Requirements", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-
+                
                 OutlinedCard(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(16.dp),
@@ -262,6 +310,70 @@ fun CustomerOrderDetailsScreen(
                             }
                         }
                     }
+                }
+            }
+
+            // Detailed Stats
+            if (shipment != null) {
+                ProviderShipmentCard(
+                    shipment = shipment
+                )
+
+                // Display Assigned Shipper Info
+                if (shipment.shipperId != null) {
+                     val shippers by viewModel.shippers.collectAsState()
+                     val shipperName = shippers.find { it.id == shipment.shipperId }?.name ?: "Unknown Shipper"
+                     
+                     OutlinedCard(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp),
+                        colors = CardDefaults.outlinedCardColors(
+                            containerColor = MaterialTheme.colorScheme.surface
+                        ),
+                        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant)
+                    ) {
+                         Column(modifier = Modifier.padding(16.dp)) {
+                            Text(
+                                text = "Assigned Shipper",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = shipperName,
+                                style = MaterialTheme.typography.bodyLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "ID: ${shipment.shipperId}", 
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                         }
+                    }
+                }
+            }
+
+            // Actions
+            if (shipment != null && shipment.status == ShipmentStatus.IN_TRANSIT) {
+                Button(
+                    onClick = { viewModel.confirmDelivery(order.id) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Confirm Receipt")
+                }
+            } else if (order.status == OrderStatus.PENDING || (shipment != null && shipment.status == ShipmentStatus.ASSIGNED)) {
+                // Allow cancel if Order is PENDING (though API support is limited, we show button)
+                // OR if Shipment is ASSIGNED (before transit)
+                OutlinedButton(
+                    onClick = { viewModel.cancelShipment(order.id, "Cancelled by Customer") },
+                    modifier = Modifier.fillMaxWidth(),
+                    // Disable if it's PENDING because we don't have cancelOrder API implementation in ViewModel yet 
+                    // (ViewModel checks for shipmentId so it would do nothing)
+                    enabled = shipment != null 
+                ) {
+                    Text("Cancel Order")
                 }
             }
         }

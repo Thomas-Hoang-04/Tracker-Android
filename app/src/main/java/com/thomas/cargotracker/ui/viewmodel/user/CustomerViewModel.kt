@@ -1,3 +1,4 @@
+
 package com.thomas.cargotracker.ui.viewmodel.user
 
 import androidx.lifecycle.ViewModel
@@ -32,15 +33,27 @@ class CustomerViewModel @Inject constructor(
     private val _users = MutableStateFlow<List<UserResult>>(emptyList())
     val users: StateFlow<List<UserResult>> = _users.asStateFlow()
 
+    private val _shippers = MutableStateFlow<List<UserResult>>(emptyList())
+    val shippers: StateFlow<List<UserResult>> = _shippers.asStateFlow()
+
+    private val _isLoading = MutableStateFlow(false)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     init {
         loadData()
     }
 
     private fun loadData() {
         viewModelScope.launch {
-            fetchOrders()
-            fetchShipments()
-            fetchUsers()
+            _isLoading.value = true
+            try {
+                fetchOrders()
+                fetchShipments()
+                fetchUsers()
+                fetchShippers()
+            } finally {
+                _isLoading.value = false
+            }
         }
     }
 
@@ -91,8 +104,41 @@ class CustomerViewModel @Inject constructor(
         }
     }
 
+    private fun fetchShippers() {
+        viewModelScope.launch {
+            try {
+                when (val shippersResult = userRepository.getUsersByRole(UserRole.SHIPPER)) {
+                    is Result.Success -> {
+                        _shippers.value = shippersResult.data
+                            .filter { it.isActive }
+                            .map { user ->
+                                UserResult(
+                                    name = user.fullName,
+                                    id = user.id,
+                                    role = user.role.toString(),
+                                    address = user.address
+                                )
+                            }
+                    }
+                    is Result.Error -> {
+                        _shippers.value = emptyList()
+                    }
+                    is Result.Loading -> {
+                        // Keep current list while loading
+                    }
+                }
+            } catch (_: Exception) {
+                _shippers.value = emptyList()
+            }
+        }
+    }
+
     fun refreshUsers() {
         fetchUsers()
+    }
+
+    fun refreshOrders() {
+        loadData()
     }
 
     sealed class CreateOrderState {
@@ -155,11 +201,32 @@ class CustomerViewModel @Inject constructor(
         }
     }
 
-    suspend fun getOrder(id: String): OrderResponse? {
-        return orderRepository.getOrder(id)
+    fun confirmDelivery(orderId: String) {
+        val order = orders.value.find { it.id == orderId }
+        val shipmentId = order?.shipmentId
+        if (shipmentId != null) {
+            viewModelScope.launch {
+                shipmentRepository.completeShipment(shipmentId, null) // Use server time
+                loadData() // Refresh
+            }
+        }
     }
 
-    fun refreshOrders() {
-        loadData()
+    fun cancelShipment(orderId: String, reason: String) {
+        val order = orders.value.find { it.id == orderId }
+        // If order is PENDING (no shipment), we technically can't "cancel shipment".
+        // If we had a cancelOrder API, we'd use it here.
+        // For now, we only proceed if there is a shipment ID (meaning status is ASSIGNED or higher).
+        val shipmentId = order?.shipmentId
+        if (shipmentId != null) {
+            viewModelScope.launch {
+                shipmentRepository.cancelShipment(shipmentId, reason)
+                loadData() // Refresh
+            }
+        }
+    }
+
+    suspend fun getOrder(id: String): Shipment? {
+        return shipmentRepository.getShipment(id)
     }
 }
