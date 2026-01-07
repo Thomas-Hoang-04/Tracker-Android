@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
+import android.util.Log
 
 interface ShipmentRepository {
     val shipments: StateFlow<List<Shipment>>
@@ -48,25 +49,32 @@ class ShipmentRepositoryImpl @Inject constructor(
     override suspend fun fetchShipments() {
         withContext(Dispatchers.IO) {
             try {
+                Log.d("ShipmentRepo", "fetchShipments: Fetching all shipments...")
                 val response = api.getAllShipments()
+                Log.d("ShipmentRepo", "fetchShipments: Response code: ${response.code()}")
                 if (response.isSuccessful && response.body() != null) {
                     val dtoList = response.body()!!
-                    // For List View: Map without extra data to avoid N+1
+                    Log.d("ShipmentRepo", "fetchShipments: Received ${dtoList.size} shipments")
                     val domainList = dtoList.map { ShipmentMapper.mapToDomain(it) }
                     _shipments.value = domainList
+                } else {
+                    Log.e("ShipmentRepo", "fetchShipments: Failed. Msg: ${response.message()}")
                 }
             } catch (e: Exception) {
+                Log.e("ShipmentRepo", "fetchShipments: Exception", e)
                 e.printStackTrace()
             }
         }
     }
 
     override suspend fun getShipment(id: String): Shipment? {
+        // ... (existing getShipment logs are fine, keeping logic same)
         return withContext(Dispatchers.IO) {
             try {
                 // 1. Fetch Shipment Basic Info
                 val shipmentResponse = api.getShipmentById(id)
                 if (!shipmentResponse.isSuccessful || shipmentResponse.body() == null) {
+                    Log.e("ShipmentRepo", "getShipment: Failed to fetch shipment $id")
                     return@withContext null
                 }
                 val dto = shipmentResponse.body()!!
@@ -82,15 +90,15 @@ class ShipmentRepositoryImpl @Inject constructor(
                 // 3. Fetch Sensor Data (if device attached)
                 var sensorData: SensorData? = null
                 if (dto.deviceId != null) {
+                    // Log.d("ShipmentRepo", "Fetching telemetry for deviceId: ${dto.deviceId}")
                     val telemetryDeferred = api.getDeviceTelemetry(dto.deviceId)
                     val locationDeferred = api.getDeviceLocation(dto.deviceId)
                     
-                    // Simple sequential fetch for now, could be parallelized with async/await
                     val telemetry = if (telemetryDeferred.isSuccessful) telemetryDeferred.body() else null
                     val location = if (locationDeferred.isSuccessful) locationDeferred.body() else null
                     
                     sensorData = ShipmentMapper.mapSensorData(telemetry, location)
-                }
+                } 
 
                 // 4. Map & Return
                 ShipmentMapper.mapToDomain(dto, customerName, sensorData)
@@ -137,17 +145,24 @@ class ShipmentRepositoryImpl @Inject constructor(
     override suspend fun filterShipments(status: ShipmentStatus?, search: String?) {
         withContext(Dispatchers.IO) {
             try {
+                Log.d("ShipmentRepo", "filterShipments: status=$status, search=$search")
                 val request = ShipmentFilterRequest(
                     status = status,
                     search = search
                 )
                 val response = api.filterShipments(request)
+                Log.d("ShipmentRepo", "filterShipments: Response code: ${response.code()}")
+                
                 if (response.isSuccessful && response.body() != null) {
                     val dtoList = response.body()!!.shipments
+                    Log.d("ShipmentRepo", "filterShipments: Received ${dtoList.size} items, Total: ${response.body()!!.total}")
                     val domainList = dtoList.map { ShipmentMapper.mapToDomain(it) }
                     _shipments.value = domainList
+                } else {
+                    Log.e("ShipmentRepo", "filterShipments: Failed. Msg: ${response.message()} Body: ${response.errorBody()?.string()}")
                 }
             } catch (e: Exception) {
+                Log.e("ShipmentRepo", "filterShipments: Exception", e)
                 e.printStackTrace()
             }
         }
