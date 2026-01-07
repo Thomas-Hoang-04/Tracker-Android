@@ -3,7 +3,13 @@ package com.thomas.cargotracker.ui.viewmodel.user
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.thomas.cargotracker.domain.model.Shipment
+import com.thomas.cargotracker.dto.OrderResponse
+import com.thomas.cargotracker.dto.OrderStatus
+import com.thomas.cargotracker.dto.UserRole
+import com.thomas.cargotracker.network.Result
+import com.thomas.cargotracker.repository.OrderRepository
 import com.thomas.cargotracker.repository.ShipmentRepository
+import com.thomas.cargotracker.repository.UserRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -13,13 +19,16 @@ import javax.inject.Inject
 
 @HiltViewModel
 class CustomerViewModel @Inject constructor(
+    private val userRepository: UserRepository,
+    private val orderRepository: OrderRepository,
     private val shipmentRepository: ShipmentRepository
 ) : ViewModel() {
 
-    val orders: StateFlow<List<Shipment>> = shipmentRepository.shipments
+    val orders: StateFlow<List<OrderResponse>> = orderRepository.orders
+    private val _shipments = MutableStateFlow<List<Shipment>>(emptyList())
+    val shipments: StateFlow<List<Shipment>> = _shipments.asStateFlow()
 
-    // Mock Providers/Users for "Search People"
-    data class UserResult(val name: String, val id: String, val role: String)
+    data class UserResult(val name: String, val id: String, val role: String, val address: String?)
     private val _users = MutableStateFlow<List<UserResult>>(emptyList())
     val users: StateFlow<List<UserResult>> = _users.asStateFlow()
 
@@ -29,21 +38,67 @@ class CustomerViewModel @Inject constructor(
 
     private fun loadData() {
         viewModelScope.launch {
-            shipmentRepository.fetchShipments()
-
-            // Mock Users (Keep as is for now)
-            _users.value = listOf(
-                UserResult("Pham Viet Hoa", "97b9e86c-e958-4fe9-87ce-45f62994954a", "Customer"),
-                UserResult("Provider Company", "e811533d-1f5a-4eee-9456-b33d682969d8", "Provider"),
-                UserResult("Shipper", "71ad6c6a-c19d-493a-9f4d-21b2edcab276", "Shipper"),
-            )
+            fetchOrders()
+            fetchShipments()
+            fetchUsers()
         }
     }
-    
+
+    private suspend fun fetchOrders() = orderRepository.fetchOrders()
+
+    private suspend fun fetchShipments() {
+        val acceptedOrders = orders.value.filter {
+            it.status == OrderStatus.ACCEPTED && it.shipmentId != null
+        }
+
+        val shipmentList = mutableListOf<Shipment>()
+        for (order in acceptedOrders) {
+            order.shipmentId?.let { shipmentId ->
+                shipmentRepository.getShipment(shipmentId)?.let { shipment ->
+                    shipmentList.add(shipment)
+                }
+            }
+        }
+        _shipments.value = shipmentList
+    }
+
+    private fun fetchUsers() {
+        viewModelScope.launch {
+            try {
+                when (val providersResult = userRepository.getUsersByRole(UserRole.PROVIDER)) {
+                    is Result.Success -> {
+                        _users.value = providersResult.data
+                            .filter { it.isActive }
+                            .map { user ->
+                                UserResult(
+                                    name = user.fullName,
+                                    id = user.id,
+                                    role = user.role.toString(),
+                                    address = user.address
+                                )
+                            }
+                    }
+                    is Result.Error -> {
+                        _users.value = emptyList()
+                    }
+                    is Result.Loading -> {
+                        // Keep current list while loading
+                    }
+                }
+            } catch (_: Exception) {
+                _users.value = emptyList()
+            }
+        }
+    }
+
+    fun refreshUsers() {
+        fetchUsers()
+    }
+
     sealed class CreateOrderState {
         object Idle : CreateOrderState()
         object Loading : CreateOrderState()
-        object Success : CreateOrderState()
+        data class Success(val order: OrderResponse) : CreateOrderState()
         data class Error(val message: String) : CreateOrderState()
     }
 
@@ -59,22 +114,37 @@ class CustomerViewModel @Inject constructor(
         goodsDescription: String,
         pickupAddress: String,
         deliveryAddress: String,
-        estimatedDeliveryAt: String? = null
+        estimatedDeliveryAt: String? = null,
+        requireTemperatureTracking: Boolean = false,
+        minTemperature: Double? = null,
+        maxTemperature: Double? = null,
+        requireHumidityTracking: Boolean = false,
+        minHumidity: Double? = null,
+        maxHumidity: Double? = null,
+        requireLocationTracking: Boolean = true,
+        specialRequirements: String? = null
     ) {
         viewModelScope.launch {
             _createOrderState.value = CreateOrderState.Loading
             try {
-                // Customer uses the default createShipment which relies on backend principal for customerId
-                val shipment = shipmentRepository.createShipment(
+                val order = orderRepository.createOrder(
                     providerId = providerId,
                     goodsDescription = goodsDescription,
                     pickupAddress = pickupAddress,
                     deliveryAddress = deliveryAddress,
-                    estimatedDeliveryAt = estimatedDeliveryAt
+                    estimatedDeliveryAt = estimatedDeliveryAt,
+                    requireTemperatureTracking = requireTemperatureTracking,
+                    minTemperature = minTemperature,
+                    maxTemperature = maxTemperature,
+                    requireHumidityTracking = requireHumidityTracking,
+                    minHumidity = minHumidity,
+                    maxHumidity = maxHumidity,
+                    requireLocationTracking = requireLocationTracking,
+                    specialRequirements = specialRequirements
                 )
-                
-                if (shipment != null) {
-                    _createOrderState.value = CreateOrderState.Success
+
+                if (order != null) {
+                    _createOrderState.value = CreateOrderState.Success(order)
                     loadData() // Refresh list
                 } else {
                     _createOrderState.value = CreateOrderState.Error("Failed to create order")
@@ -85,7 +155,11 @@ class CustomerViewModel @Inject constructor(
         }
     }
 
-    suspend fun getOrder(id: String): Shipment? {
-        return shipmentRepository.getShipment(id)
+    suspend fun getOrder(id: String): OrderResponse? {
+        return orderRepository.getOrder(id)
+    }
+
+    fun refreshOrders() {
+        loadData()
     }
 }

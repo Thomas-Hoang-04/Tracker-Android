@@ -44,8 +44,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.thomas.cargotracker.ui.components.PrimaryButton
 import com.thomas.cargotracker.ui.viewmodel.user.CustomerViewModel
 
-data class MockProvider(val name: String, val id: String, val role: String = "Provider")
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CustomerCreateOrderScreen(
@@ -56,11 +54,12 @@ fun CustomerCreateOrderScreen(
     var goodsDescription by remember { mutableStateOf("General Cargo") }
     var pickupAddress by remember { mutableStateOf("") }
     var deliveryAddress by remember { mutableStateOf("") }
-    
+
     var showProviderDialog by remember { mutableStateOf(false) }
-    var selectedProvider by remember { mutableStateOf<MockProvider?>(null) }
-    
+    var selectedProvider by remember { mutableStateOf<CustomerViewModel.UserResult?>(null) }
+
     val createOrderState by viewModel.createOrderState.collectAsState()
+    val users by viewModel.users.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(createOrderState) {
@@ -69,10 +68,12 @@ fun CustomerCreateOrderScreen(
                 viewModel.resetCreateOrderState()
                 onOrderCreated()
             }
+
             is CustomerViewModel.CreateOrderState.Error -> {
                 snackbarHostState.showSnackbar(state.message)
                 viewModel.resetCreateOrderState()
             }
+
             else -> {}
         }
     }
@@ -153,7 +154,7 @@ fun CustomerCreateOrderScreen(
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "ID: ${selectedProvider!!.id}", 
+                            text = "ID: ${selectedProvider!!.id}",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -186,11 +187,12 @@ fun CustomerCreateOrderScreen(
             )
         }
     }
-    
+
     if (showProviderDialog) {
         ProviderSelectionDialog(
+            providers = users,
             onDismiss = { showProviderDialog = false },
-            onSelect = { 
+            onSelect = {
                 selectedProvider = it
                 showProviderDialog = false
             }
@@ -200,41 +202,51 @@ fun CustomerCreateOrderScreen(
 
 @Composable
 fun ProviderSelectionDialog(
+    providers: List<CustomerViewModel.UserResult>,
     onDismiss: () -> Unit,
-    onSelect: (MockProvider) -> Unit
+    onSelect: (CustomerViewModel.UserResult) -> Unit
 ) {
-    // Only one provider available
-    val providers = remember {
-        listOf(
-            MockProvider("Provider Company", "e811533d-1f5a-4eee-9456-b33d682969d8")
-        )
-    }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Select Provider") },
         text = {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.heightIn(max = 300.dp)
-            ) {
-                items(providers) { provider ->
-                    Card(
-                        onClick = { onSelect(provider) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surface
-                        )
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically
+            if (providers.isEmpty()) {
+                Text(
+                    "No providers available",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(16.dp)
+                )
+            } else {
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.heightIn(max = 300.dp)
+                ) {
+                    items(providers) { provider ->
+                        Card(
+                            onClick = { onSelect(provider) },
+                            modifier = Modifier.fillMaxWidth(),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surface
+                            )
                         ) {
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(provider.name, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Bold)
-                                Text("ID: ${provider.id}", style = MaterialTheme.typography.bodySmall)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        provider.name,
+                                        style = MaterialTheme.typography.bodyLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                    Text(
+                                        "ID: ${provider.id}",
+                                        style = MaterialTheme.typography.bodySmall
+                                    )
+                                }
                             }
                         }
                     }
