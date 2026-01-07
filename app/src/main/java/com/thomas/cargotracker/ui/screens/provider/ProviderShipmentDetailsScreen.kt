@@ -1,7 +1,5 @@
 package com.thomas.cargotracker.ui.screens.provider
 
-import android.content.Intent
-import android.widget.Toast
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -11,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -23,16 +20,7 @@ import androidx.compose.material.icons.filled.Battery3Bar
 import androidx.compose.material.icons.filled.Battery5Bar
 import androidx.compose.material.icons.filled.BatteryAlert
 import androidx.compose.material.icons.filled.BatteryFull
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.LocationOff
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SignalCellularAlt
-import androidx.compose.material.icons.outlined.Compress
-import androidx.compose.material.icons.outlined.Thermostat
-import androidx.compose.material.icons.outlined.WaterDrop
-import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,12 +39,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.core.net.toUri
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.thomas.cargotracker.data.model.ShipmentStatus
 import com.thomas.cargotracker.domain.model.Shipment
@@ -70,24 +54,25 @@ fun ProviderShipmentDetailsScreen(
     onBack: () -> Unit,
     viewModel: ProviderViewModel = hiltViewModel()
 ) {
-    val orders by viewModel.shipments.collectAsState()
-    val order = orders.find { it.id == shipmentId } ?: Shipment(
+    val selectedShipment by viewModel.selectedShipment.collectAsState()
+    val order = selectedShipment ?: Shipment(
         id = shipmentId,
         trackingId = shipmentId.take(8),
         status = ShipmentStatus.PENDING,
-        description = "Unknown",
-        origin = "Unknown",
-        destination = "Unknown",
+        description = "Loading...",
+        origin = "Loading...",
+        destination = "Loading...",
         senderId = "Unknown",
         receiverId = "Unknown",
-        customerName = "Unknown"
+        customerName = "Loading..."
     )
 
-    // Polling Mechanism
-    LaunchedEffect(Unit) {
+    // Load full details (including telemetry) on entry and poll
+    LaunchedEffect(shipmentId) {
+        viewModel.loadShipmentDetails(shipmentId)
         while(true) {
-            viewModel.loadOrders() // Refresh data
-            delay(30_000) // 30 seconds
+            delay(30_000) // 30 seconds polling
+            viewModel.loadShipmentDetails(shipmentId)
         }
     }
 
@@ -205,21 +190,13 @@ fun ProviderShipmentDetailsScreen(
             }
 
             // --- Location Status Section ---
-            Text("Live Location", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.secondaryContainer)
-            ) {
-                 LocationCard(
-                     latitude = order.sensorData?.latitude,
-                     longitude = order.sensorData?.longitude,
-                     isMoving = order.sensorData?.isMoving,
-                     trackingId = order.trackingId,
-                     modifier = Modifier.fillMaxSize()
-                 )
-            }
+            LocationCard(
+                latitude = order.sensorData?.latitude,
+                longitude = order.sensorData?.longitude,
+                isMoving = order.sensorData?.isMoving,
+                trackingId = order.trackingId,
+                modifier = Modifier.fillMaxWidth()
+            )
 
             // --- Telemetry Grid ---
             if (order.sensorData != null) {

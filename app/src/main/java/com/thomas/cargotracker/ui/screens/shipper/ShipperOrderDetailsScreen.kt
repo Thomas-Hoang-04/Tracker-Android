@@ -2,20 +2,18 @@ package com.thomas.cargotracker.ui.screens.shipper
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Place
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -27,16 +25,16 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.thomas.cargotracker.ui.screens.provider.ProviderShipmentCard
-import com.thomas.cargotracker.ui.screens.provider.TelemetryGrid
-import com.thomas.cargotracker.ui.screens.provider.LocationCard
-import com.thomas.cargotracker.domain.model.Shipment
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.thomas.cargotracker.data.model.ShipmentStatus
+import com.thomas.cargotracker.domain.model.Shipment
+import com.thomas.cargotracker.ui.screens.provider.BatteryStatusCard
+import com.thomas.cargotracker.ui.screens.provider.LocationCard
+import com.thomas.cargotracker.ui.screens.provider.ProviderShipmentCard
+import com.thomas.cargotracker.ui.screens.provider.TelemetryGrid
 import com.thomas.cargotracker.ui.viewmodel.user.ShipperViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -119,9 +117,17 @@ fun ShipperOrderDetailsScreen(
 
             // Full Telemetry
             if (order.sensorData != null) {
+                Text("Device Status", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                BatteryStatusCard(
+                    batteryLevel = order.sensorData.batteryLevel,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+                
                 Text("Full Sensor Data", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                 TelemetryGrid(
-                    sensorData = order.sensorData!!,
+                    sensorData = order.sensorData,
                     modifier = Modifier.fillMaxWidth()
                 )
             }

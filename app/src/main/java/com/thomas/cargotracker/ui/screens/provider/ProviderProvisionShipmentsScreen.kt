@@ -85,7 +85,7 @@ import com.thomas.cargotracker.ui.viewmodel.AuthViewModel
 import com.thomas.cargotracker.ui.viewmodel.BleViewModel
 import com.thomas.cargotracker.ui.viewmodel.user.ProviderViewModel
 
-data class MockShipper(val name: String, val id: String, val role: String = "Shipper")
+
 
 enum class ProvisionShipmentStep {
     SELECT_SHIPMENT,
@@ -120,7 +120,7 @@ fun ProviderProvisionShipmentScreen(
     val orderApprovalState by viewModel.orderApprovalState.collectAsState()
 
     var shipperSearch by remember { mutableStateOf("") }
-    var selectedShipper by remember { mutableStateOf<MockShipper?>(null) }
+    var selectedShipper by remember { mutableStateOf<ProviderViewModel.UserResult?>(null) }
 
     var selectedDevice by remember { mutableStateOf<BleScannedDevice?>(null) }
     var tokenInput by remember { mutableStateOf("") }
@@ -479,13 +479,8 @@ fun ProviderProvisionShipmentScreen(
                         singleLine = true
                     )
 
-                    val mockShippers = remember {
-                        listOf(
-                            MockShipper("Shipper", "71ad6c6a-c19d-493a-9f4d-21b2edcab276")
-                        )
-                    }
-
-                    val filteredShippers = if (shipperSearch.isEmpty()) emptyList() else mockShippers.filter {
+                    val shippers by viewModel.shippers.collectAsState()
+                    val filteredShippers = if (shipperSearch.isEmpty()) shippers else shippers.filter {
                         it.name.contains(shipperSearch, ignoreCase = true) || it.id.contains(shipperSearch, ignoreCase = true)
                     }
 

@@ -2,7 +2,6 @@ package com.thomas.cargotracker.data.mapper
 
 import com.thomas.cargotracker.domain.model.SensorData
 import com.thomas.cargotracker.domain.model.Shipment
-import com.thomas.cargotracker.dto.LocationResponse
 import com.thomas.cargotracker.dto.ShipmentResponse
 import com.thomas.cargotracker.dto.TelemetryResponse
 
