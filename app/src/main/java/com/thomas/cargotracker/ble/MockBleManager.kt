@@ -112,7 +112,11 @@ class MockBleManager @Inject constructor(
         stopScan()
 
         _connectionState.update {
-            BleManager.ConnectionState(setupState = BleSetupState.CONNECTING, connectedDevice = device)
+            BleManager.ConnectionState(
+                setupState = BleSetupState.CONNECTING, 
+                connectedDevice = device,
+                deviceId = "88e4a1fc-2939-4787-bb68-d52b0d7d30cf" // TestDeviceData.DEVICE_ID
+            )
         }
 
         scope.launch {

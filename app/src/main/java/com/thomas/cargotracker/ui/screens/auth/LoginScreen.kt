@@ -196,6 +196,10 @@ fun LoginScreen(
                             label = "Password",
                             leadingIcon = Icons.Default.Lock,
                             imeAction = ImeAction.Done,
+                            onImeAction = {
+                                focusManager.clearFocus()
+                                authViewModel.login()
+                            }
                         )
 
                         Row(

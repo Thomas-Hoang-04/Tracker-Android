@@ -40,6 +40,7 @@ fun SecureTextField(
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
     imeAction: ImeAction = ImeAction.Next,
+    onImeAction: () -> Unit = {},
     isError: Boolean = false,
     errorMessage: String? = null,
     enabled: Boolean = true
@@ -56,6 +57,7 @@ fun SecureTextField(
             keyboardType = KeyboardType.Password,
             imeAction = imeAction
         ),
+        onKeyboardAction = { onImeAction() },
         textStyle = TextStyle(
             color = MaterialTheme.colorScheme.onSurface
         ),

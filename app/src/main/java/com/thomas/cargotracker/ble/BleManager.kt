@@ -76,6 +76,7 @@ class BleManager @Inject constructor(
     data class ConnectionState(
         val setupState: BleSetupState = BleSetupState.DISCONNECTED,
         val connectedDevice: BleScannedDevice? = null,
+        val deviceId: String? = null,
         val message: String? = null
     )
 
