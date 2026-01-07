@@ -4,6 +4,6 @@ enum class ShipmentStatus {
     PENDING,
     ASSIGNED,
     IN_TRANSIT,
-    DELIVERED,
+    COMPLETED,
     CANCELLED
 }

@@ -40,7 +40,7 @@ class ShipperViewModel @Inject constructor(
                  // For now, simple split
                  _assignedOrders.value = allShipments.filter { it.status.name == "IN_TRANSIT" || it.status.name == "ASSIGNED" }
                  _availableOrders.value = allShipments.filter { it.status.name == "PENDING" }
-                 _historyOrders.value = allShipments.filter { it.status.name == "DELIVERED" || it.status.name == "CANCELLED" }
+                 _historyOrders.value = allShipments.filter { it.status.name == "COMPLETED" || it.status.name == "CANCELLED" }
             }
         }
     }

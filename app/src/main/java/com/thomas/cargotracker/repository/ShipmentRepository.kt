@@ -92,12 +92,10 @@ class ShipmentRepositoryImpl @Inject constructor(
                 if (dto.deviceId != null) {
                     // Log.d("ShipmentRepo", "Fetching telemetry for deviceId: ${dto.deviceId}")
                     val telemetryDeferred = api.getDeviceTelemetry(dto.deviceId)
-                    val locationDeferred = api.getDeviceLocation(dto.deviceId)
                     
                     val telemetry = if (telemetryDeferred.isSuccessful) telemetryDeferred.body() else null
-                    val location = if (locationDeferred.isSuccessful) locationDeferred.body() else null
                     
-                    sensorData = ShipmentMapper.mapSensorData(telemetry, location)
+                    sensorData = ShipmentMapper.mapSensorData(telemetry)
                 } 
 
                 // 4. Map & Return

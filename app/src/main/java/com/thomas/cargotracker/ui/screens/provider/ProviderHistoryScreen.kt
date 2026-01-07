@@ -96,9 +96,9 @@ fun ProviderHistoryScreen(
                         label = { Text("All") }
                     )
                     FilterChip(
-                        selected = selectedStatus == ShipmentStatus.DELIVERED,
-                        onClick = { selectedStatus = ShipmentStatus.DELIVERED },
-                        label = { Text("Delivered") }
+                        selected = selectedStatus == ShipmentStatus.COMPLETED,
+                        onClick = { selectedStatus = ShipmentStatus.COMPLETED },
+                        label = { Text("Completed") }
                     )
                     FilterChip(
                         selected = selectedStatus == ShipmentStatus.CANCELLED,
@@ -117,7 +117,7 @@ fun ProviderHistoryScreen(
                 // Base filter: Only terminal states (Delivered/Cancelled)
                 // If the user wants to see "Active" they go to Home.
                 val historyOrders = allOrders.filter { 
-                    it.status == ShipmentStatus.DELIVERED || it.status == ShipmentStatus.CANCELLED 
+                    it.status == ShipmentStatus.COMPLETED || it.status == ShipmentStatus.CANCELLED 
                 }
 
                 val filteredOrders = historyOrders.filter { order ->

@@ -86,7 +86,7 @@ fun CustomerOrderCard(
                 // For Pending/Assigned shipments, we show "Accepted" from the Order status
                 val useShipmentStatus = shipmentStatus != null && 
                                       (shipmentStatus == ShipmentStatus.IN_TRANSIT || 
-                                       shipmentStatus == ShipmentStatus.DELIVERED || 
+                                       shipmentStatus == ShipmentStatus.COMPLETED || 
                                        shipmentStatus == ShipmentStatus.CANCELLED)
 
                 val displayStatus = if (useShipmentStatus) shipmentStatus!!.name else order.status.name
@@ -94,7 +94,7 @@ fun CustomerOrderCard(
                 val statusColor = if (useShipmentStatus) {
                     when (shipmentStatus) {
                          ShipmentStatus.IN_TRANSIT -> Color(0xFFFFF3E0) // Orange
-                         ShipmentStatus.DELIVERED -> Color(0xFFE8F5E9)
+                         ShipmentStatus.COMPLETED -> Color(0xFFE8F5E9)
                          ShipmentStatus.CANCELLED -> Color(0xFFFFEBEE)
                          else -> MaterialTheme.colorScheme.surfaceVariant // Should not happen given check
                     }
@@ -109,7 +109,7 @@ fun CustomerOrderCard(
                 val contentColor = if (useShipmentStatus) {
                     when (shipmentStatus) {
                          ShipmentStatus.IN_TRANSIT -> Color(0xFFE65100)
-                         ShipmentStatus.DELIVERED -> Color(0xFF2E7D32)
+                         ShipmentStatus.COMPLETED -> Color(0xFF2E7D32)
                          ShipmentStatus.CANCELLED -> Color(0xFFC62828)
                          else -> MaterialTheme.colorScheme.onSurfaceVariant
                     }
@@ -242,7 +242,7 @@ fun CustomerShipmentCard(
                         ShipmentStatus.PENDING -> MaterialTheme.colorScheme.surfaceVariant
                         ShipmentStatus.ASSIGNED -> Color(0xFFE3F2FD) // Light Blue
                         ShipmentStatus.IN_TRANSIT -> Color(0xFFFFF3E0) // Light Orange
-                        ShipmentStatus.DELIVERED -> Color(0xFFE8F5E9) // Light Green
+                        ShipmentStatus.COMPLETED -> Color(0xFFE8F5E9) // Light Green
                         ShipmentStatus.CANCELLED -> Color(0xFFFFEBEE) // Light Red
                     },
                     shape = RoundedCornerShape(8.dp)
@@ -255,7 +255,7 @@ fun CustomerShipmentCard(
                             ShipmentStatus.PENDING -> MaterialTheme.colorScheme.onSurfaceVariant
                             ShipmentStatus.ASSIGNED -> Color(0xFF1565C0) // Dark Blue
                             ShipmentStatus.IN_TRANSIT -> Color(0xFFE65100) // Dark Orange
-                            ShipmentStatus.DELIVERED -> Color(0xFF2E7D32) // Dark Green
+                            ShipmentStatus.COMPLETED -> Color(0xFF2E7D32) // Dark Green
                             ShipmentStatus.CANCELLED -> Color(0xFFC62828) // Dark Red
                         }
                     )
