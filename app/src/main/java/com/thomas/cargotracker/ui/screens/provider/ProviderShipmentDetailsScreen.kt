@@ -295,8 +295,8 @@ fun ProviderShipmentDetailsScreen(
                     }
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         TelemetryCard(
-                            label = "Pressure",
-                            value = "${order.sensorData.pressure ?: "--"} hPa",
+                            label = "Light",
+                            value = "${order.sensorData.light ?: "--"} hPa",
                             icon = Icons.Outlined.Compress, // Or similar
                             modifier = Modifier.weight(1f)
                         )
