@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -39,6 +40,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -131,6 +133,34 @@ fun ProviderShipmentDetailsScreen(
                     )
                     if (order.createdDate.isNotEmpty()) {
                         Text("Created: ${order.createdDate}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+
+                // Shipper Info
+            val shippers by viewModel.shippers.collectAsState()
+            val shipperName = if (order.shipperId != null) {
+                shippers.find { it.id == order.shipperId }?.name ?: "Unknown Shipper"
+            } else null
+
+            if (order.shipperId != null) {
+                OutlinedCard(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text("Assigned Shipper", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = shipperName ?: "Unknown",
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = "ID: ${order.shipperId}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
                     }
                 }
             }
@@ -290,7 +320,7 @@ fun ProviderShipmentDetailsScreen(
 
 
             // Actions
-            if (order.status != ShipmentStatus.DELIVERED && order.status != ShipmentStatus.CANCELLED) {
+            if (order.status == ShipmentStatus.PENDING || order.status == ShipmentStatus.ASSIGNED) {
                 Text("Actions", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                 Row(
                     modifier = Modifier
@@ -298,20 +328,11 @@ fun ProviderShipmentDetailsScreen(
                         .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    if (order.status == ShipmentStatus.PENDING || order.status == ShipmentStatus.ASSIGNED) {
-                        Button(onClick = { viewModel.startTransit(order.id) }) {
-                            Text("Start Transit")
-                        }
-                    }
-                    if (order.status == ShipmentStatus.IN_TRANSIT) {
-                        Button(onClick = { viewModel.completeShipment(order.id) }) {
-                            Text("Complete")
-                        }
-                    }
                     OutlinedButton(
-                        onClick = { viewModel.cancelShipment(order.id, "Cancelled by provider") }
+                        onClick = { viewModel.cancelShipment(order.id, "Cancelled by provider") },
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Text("Cancel")
+                        Text("Cancel Shipment")
                     }
                 }
             }
